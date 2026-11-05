@@ -1,0 +1,11 @@
+role_id,title,client_project,required_skills,nice_to_have_skills,seniority,location,start_date,status,description
+DEMO-001,Backend Engineer,Demo Co - Payments,Python; FastAPI; SQL,Docker; AWS,Mid,Remote,2026-12-01,Open,DEMO DATA - Build payment APIs for a fake client.
+DEMO-002,Frontend Developer,Demo Co - Dashboard,JavaScript; HTML; CSS,React; Figma,Junior,Hybrid,2026-12-15,Open,DEMO DATA - Improve an internal dashboard.
+DEMO-003,Data Analyst,Sample Health,SQL; Excel; Python,Power BI; Tableau,Mid,On-site,2027-01-05,Open,DEMO DATA - Analyze sample patient wait times.
+DEMO-004,DevOps Engineer,Example Retail,Docker; Linux; CI/CD,Kubernetes; Terraform,Senior,Remote,2027-01-10,Open,DEMO DATA - Containerize and deploy store services.
+DEMO-005,QA Tester,Demo Co - Mobile App,Manual Testing; Jira,Selenium; Python,Junior,Remote,2026-12-08,Open,DEMO DATA - Test a fake mobile banking app.
+DEMO-006,Machine Learning Engineer,Sample Labs,Python; PyTorch; SQL,MLOps; Docker,Senior,Hybrid,2027-02-01,Open,DEMO DATA - Train a recommendation model.
+DEMO-007,Project Manager,Example Logistics,Agile; Scrum; Communication,PMP; Jira,Senior,On-site,2027-01-20,Open,DEMO DATA - Lead a warehouse software rollout.
+DEMO-008,UX Designer,Demo Co - Onboarding,Figma; User Research,HTML; CSS,Mid,Remote,2026-12-20,Open,DEMO DATA - Redesign employee onboarding screens.
+DEMO-009,Cloud Security Analyst,Sample Bank,Security; AWS; Networking,Python; SIEM,Mid,Hybrid,2027-02-15,Open,DEMO DATA - Review cloud access policies.
+DEMO-010,Full Stack Developer,Example Nonprofit,Python; JavaScript; SQL,FastAPI; Docker,Mid,Remote,2027-01-12,Open,DEMO DATA - Build a volunteer sign-up portal.

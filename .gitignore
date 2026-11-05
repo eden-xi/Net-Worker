@@ -1,0 +1,14 @@
+# Local test data from deploy/server.py
+.localdata/
+
+# Secrets and environments
+.env
+.venv/
+
+# Python cache
+__pycache__/
+
+# Private data. NOTE: files already committed stay tracked until
+# someone runs "git rm --cached" (see the private-data plan).
+*.db
+uploads/

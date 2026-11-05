@@ -1,0 +1,11 @@
+# Private data: never goes into the image
+backend/database/*.db
+uploads/
+.localdata/
+.env
+
+# Not needed to run the app
+.git/
+**/__pycache__/
+.venv/
+docs/

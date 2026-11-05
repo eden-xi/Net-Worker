@@ -1,0 +1,10 @@
+# Run locally:  docker compose up --build
+# Then open http://localhost:8000  (user: team, password: localtest)
+services:
+  net-worker:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      APP_USERNAME: team
+      APP_PASSWORD: localtest   # local only; the live site uses a different one

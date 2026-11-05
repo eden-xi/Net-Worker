@@ -1,0 +1,13 @@
+# Render blueprint: one free web service built from the Dockerfile.
+services:
+  - type: web
+    name: net-worker
+    runtime: docker
+    plan: free
+    branch: main
+    healthCheckPath: /healthz
+    envVars:
+      - key: APP_USERNAME
+        value: team
+      - key: APP_PASSWORD
+        sync: false   # Render asks you for this; it's never stored in git
