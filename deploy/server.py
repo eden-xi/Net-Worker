@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = ROOT / "frontend"
 DEMO_CSV = ROOT / "deploy" / "demo_projects.csv"
 
-DATA_DIR = Path(os.getenv("DATA_DIR", str(ROOT / ".localdata")))
+DATA_DIR = Path(os.getenv("DATA_DIR", str(ROOT / "deploy" / ".localdata")))
 RESUME_DIR = DATA_DIR / "resumes"
 RESUME_DIR.mkdir(parents=True, exist_ok=True)
 

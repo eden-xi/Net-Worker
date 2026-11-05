@@ -1,8 +1,11 @@
-# Run locally:  docker compose up --build
+# Run locally from the REPO ROOT:
+#   docker compose -f deploy/docker-compose.yml up --build
 # Then open http://localhost:8000  (user: team, password: localtest)
 services:
   net-worker:
-    build: .
+    build:
+      context: ..                   # repo root, so the container can see backend/ and frontend/
+      dockerfile: deploy/Dockerfile
     ports:
       - "8000:8000"
     environment:

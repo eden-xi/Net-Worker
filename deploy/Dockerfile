@@ -1,4 +1,5 @@
 # Net-Worker container: the existing app + deploy/server.py wrapper.
+# Build from the REPO ROOT:  docker build -f deploy/Dockerfile .
 FROM python:3.13-slim
 
 # Don't write .pyc files, print logs right away, keep data in /data.
@@ -10,11 +11,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Install libraries first so Docker can cache this step.
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY deploy/requirements.txt deploy/requirements.txt
+RUN pip install --no-cache-dir -r deploy/requirements.txt
 
-# Copy the code (.dockerignore keeps the real database and resumes out).
-COPY . .
+# Copy ONLY the code, file by file. The real database (backend/database/*.db)
+# and resumes (uploads/) are never copied, so they can't end up in the image.
+COPY backend/api/*.py backend/api/
+COPY backend/database/database.py backend/database/
+COPY frontend/ frontend/
+COPY deploy/*.py deploy/*.csv deploy/
 
 # Run as a normal user, not root.
 RUN useradd --create-home appuser \

@@ -1,10 +1,14 @@
-# Render blueprint: one free web service built from the Dockerfile.
+# Render blueprint: one free web service built from deploy/Dockerfile.
+# Not used yet (the service was set up by hand in the dashboard).
+# To use it later, point Render's Blueprint at this file: deploy/render.yaml
 services:
   - type: web
     name: net-worker
     runtime: docker
     plan: free
     branch: main
+    dockerfilePath: ./deploy/Dockerfile
+    dockerContext: .
     healthCheckPath: /healthz
     envVars:
       - key: APP_USERNAME
