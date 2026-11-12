@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Net-Worker Marketplace</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Order matters: shared components first, then the two dashboards, then the router. -->
+    <script defer src="js/components.js"></script>
+    <script defer src="js/employee.js"></script>
+    <script defer src="js/manager.js"></script>
+    <script defer src="js/app.js"></script>
+</head>
+<body>
+
+<!-- ==========================================
+     LOGIN WALL (shown until someone signs in)
+     ========================================== -->
+<div id="login-wall" class="login-wall hidden">
+    <div class="login-panel">
+        <div class="brand">
+            <span class="brand-mark">N</span>
+            <div>
+                <h1>Net-Worker</h1>
+                <p class="muted">Internal project marketplace</p>
+            </div>
+        </div>
+
+        <div id="role-options" class="role-options">
+            <p class="muted">How are you using Net-Worker today?</p>
+
+            <button type="button" class="role-card" data-role-option="employee">
+                <span class="role-tag">Option A</span>
+                <strong>Employee</strong>
+                <span class="muted">Seeking projects: browse listings and apply.</span>
+            </button>
+
+            <button type="button" class="role-card" data-role-option="manager">
+                <span class="role-tag">Option B</span>
+                <strong>Project Manager</strong>
+                <span class="muted">Posting projects: create listings, manage them, review applicants.</span>
+            </button>
+        </div>
+
+        <form id="login-form" class="stacked-form hidden">
+            <h2 id="login-role-label"></h2>
+            <label>Work email <input id="login-email" type="email" required autocomplete="username"></label>
+            <label>Password <input id="login-password" type="password" required autocomplete="current-password"></label>
+            <p id="login-hint" class="hint"></p>
+            <button type="submit" class="primary-button">Sign in</button>
+            <button type="button" id="login-back" class="link-button">Back to options</button>
+        </form>
+
+        <p id="login-status" class="status-text"></p>
+    </div>
+</div>
+
+<!-- ==========================================
+     APP SHELL (one shell; the router fills it with the right dashboard)
+     ========================================== -->
+<div id="app-shell" class="app-shell hidden">
+    <header class="topbar">
+        <div class="brand small">
+            <span class="brand-mark">N</span>
+            <strong>Net-Worker</strong>
+        </div>
+        <nav id="dashboard-nav" class="dashboard-nav"></nav>
+        <div class="user-chip">
+            <span id="user-name"></span>
+            <span id="user-role" class="role-badge"></span>
+            <button type="button" id="logout-button" class="secondary-button">Sign out</button>
+        </div>
+    </header>
+
+    <main id="dashboard-root" class="dashboard-root"></main>
+</div>
+
+<!-- ==========================================
+     POP-UP (shared by both dashboards)
+     ========================================== -->
+<div id="modal" class="modal hidden">
+    <div class="modal-content">
+        <button type="button" id="modal-close" class="modal-close" aria-label="Close">&times;</button>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
+</body>
+</html>
