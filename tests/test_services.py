@@ -16,6 +16,7 @@ from backend.core import config
 from backend.core.db import connect, create_tables
 from backend.core.errors import Conflict, Invalid, NotFound, TooLarge
 from backend.schemas.projects import ProjectIn, ProjectOut, ProjectStatus
+from backend.schemas.users import User
 from backend.services import applications, projects, resumes
 from tests.conftest import login, make_pdf
 
@@ -24,6 +25,10 @@ CSV = (b"Job ID,Job Title,Client,Skills,Status\n"
        b"T-2,Data Analyst,Health,SQL,OPEN \n"
        b"T-3,Old Role,Legacy,COBOL,Closed\n"
        b"T-4,Strange Role,X,Y,On hold\n")
+
+
+ERIN = User(email="erin@x.test", name="Erin", role="employee")
+MORGAN = User(email="manager@networker.test", name="Morgan Manager", role="manager")
 
 
 @pytest.fixture
@@ -35,8 +40,7 @@ def db(data_dir):
 
 @pytest.fixture
 def listing(db):
-    return projects.create(db, ProjectIn(title="  Teams bot  ", required_skills="Python; Azure"),
-                           "manager@networker.test", "Morgan Manager")
+    return projects.create(db, ProjectIn(title="  Teams bot  ", required_skills="Python; Azure"), MORGAN)
 
 
 # ------------------------------------------
@@ -68,7 +72,7 @@ def test_feed_shows_only_open_listings(db, listing):
     assert listing["title"] == "Teams bot"                     # ProjectIn trimmed the spaces
     assert [row["id"] for row in projects.list_open(db)] == [listing["id"]]
 
-    projects.set_status(db, listing["id"], ProjectStatus.CLOSED)
+    projects.set_status(db, listing["id"], ProjectStatus.CLOSED, MORGAN)
     assert projects.list_open(db) == []
 
     managed = projects.list_for_managers(db)
@@ -130,26 +134,26 @@ def test_stored_names_cannot_escape_the_folder(data_dir):
 
 def test_apply_then_duplicate_is_refused_without_orphan_files(db, listing):
     resume = resumes.read_valid_resume("cv.pdf", make_pdf())
-    receipt = applications.submit(db, listing["id"], "Erin", "erin@x.test", "Python", "Hi", resume)
+    receipt = applications.submit(db, listing["id"], ERIN, "Python", "Hi", resume)
     assert receipt["resume_uploaded"] is True
 
     with pytest.raises(Conflict):
-        applications.submit(db, listing["id"], "Erin", "erin@x.test", "Python", "Again", resume)
+        applications.submit(db, listing["id"], ERIN, "Python", "Again", resume)
 
     assert len(list(config.RESUME_DIR.iterdir())) == 1          # the refused attempt saved nothing
 
 
 def test_apply_to_closed_listing_is_refused(db, listing):
-    projects.set_status(db, listing["id"], ProjectStatus.FILLED)
+    projects.set_status(db, listing["id"], ProjectStatus.FILLED, MORGAN)
     with pytest.raises(NotFound, match="no longer open"):
-        applications.submit(db, listing["id"], "Erin", "erin@x.test", "", "", None)
+        applications.submit(db, listing["id"], ERIN, "", "", None)
 
 
 def test_second_application_reuses_profile_resume(db, listing):
-    other = projects.create(db, ProjectIn(title="Second"), "m@x.test", "M")
+    other = projects.create(db, ProjectIn(title="Second"), MORGAN)
     resume = resumes.read_valid_resume("cv.pdf", make_pdf())
-    applications.submit(db, listing["id"], "Erin", "erin@x.test", "Python", "", resume)
-    applications.submit(db, other["id"], "Erin", "erin@x.test", "Python", "", None)
+    applications.submit(db, listing["id"], ERIN, "Python", "", resume)
+    applications.submit(db, other["id"], ERIN, "Python", "", None)
 
     viewer = applications.get_document(db, applications.list_for_email(db, "erin@x.test")[0]["application_id"])
     assert viewer["attachment_type"] == "pdf"
@@ -157,8 +161,8 @@ def test_second_application_reuses_profile_resume(db, listing):
 
 
 def test_review_flow(db, listing):
-    receipt = applications.submit(db, listing["id"], "Erin", "erin@x.test", "Python", "", None)
-    applications.set_status(db, receipt["application_id"], "Under Review")
+    receipt = applications.submit(db, listing["id"], ERIN, "Python", "", None)
+    applications.set_status(db, receipt["application_id"], "Under Review", MORGAN)
 
     applicant = applications.list_for_project(db, listing["id"])[0]
     assert (applicant["status"], applicant["has_attachment"]) == ("Under Review", False)

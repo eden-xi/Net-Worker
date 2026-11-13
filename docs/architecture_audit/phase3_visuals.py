@@ -270,30 +270,34 @@ FLOWS = {
 # ------------------------------------------
 
 TABLES = {
-    "projects": (0.3, 3.3, ["id", "role_id (unique)", "title", "required_skills", "status: Open|Closed|Filled",
+    "projects": (0.3, 4.1, ["id", "role_id (unique)", "title", "required_skills", "status: Open|Closed|Filled",
                             "posted_by_email / _name", "created_at"]),
-    "applications": (4.6, 3.3, ["id", "employee_id -> employees", "project_id -> projects",
+    "applications": (4.6, 4.1, ["id", "employee_id -> employees", "project_id -> projects",
                                 "application_status", "resume_filename", "cover_letter", "submitted_at / updated_at"]),
-    "employees": (8.9, 3.3, ["id", "email (unique)", "name", "skills", "resume_filename", "resume_text"]),
-    "activity_events  (new)": (4.6, 0.0, ["id", "kind", "actor_email / actor_name", "project_id", "application_id",
+    "employees": (8.9, 4.1, ["id", "email (unique)", "name", "skills", "resume_filename", "resume_text"]),
+    "activity_events  (new)": (4.6, 0.5, ["id", "kind", "actor_email / actor_name", "project_id", "application_id",
                                           "from_status -> to_status", "created_at"]),
 }
+LINE = 0.205          # height of one text line in this figure's units
 
 
 def tables_diagram():
-    fig, ax = plt.subplots(figsize=(12, 6.2))
+    fig, ax = plt.subplots(figsize=(12, 6.4))
     ax.set_xlim(0, 13)
-    ax.set_ylim(-0.3, 6.6)
+    ax.set_ylim(0.2, 6.4)
     ax.axis("off")
     for name, (x, y, columns) in TABLES.items():
         is_new = "new" in name
-        h = 0.42 * len(columns) + 0.6
-        box(ax, x, y, 3.8, h, name, "\n".join(columns), fill=HIGHLIGHT if is_new else SURFACE,
-            edge=PURPLE if is_new else GRID, title_color=PURPLE if is_new else INK)
-    arrow(ax, 4.6, 5.2, 4.1, 5.2, text="")
-    arrow(ax, 8.4, 5.2, 8.9, 5.2, text="")
-    arrow(ax, 6.5, 1.3 + 2.0, 6.5, 3.3, color=PURPLE)
-    ax.text(6.65, 2.9, "every submit / status change\nwrites one event row", fontsize=8, color=PURPLE)
+        box(ax, x, y, 3.8, LINE * len(columns) + 0.85, name, "\n".join(columns),
+            fill=HIGHLIGHT if is_new else SURFACE, edge=PURPLE if is_new else GRID,
+            title_color=PURPLE if is_new else INK)
+    arrow(ax, 4.6, 5.3, 4.1, 5.3)
+    arrow(ax, 8.4, 5.3, 8.9, 5.3)
+    arrow(ax, 6.5, 0.5 + LINE * 7 + 0.85, 6.5, 4.1, color=PURPLE)
+    ax.text(6.65, 3.2, "every post / submit / status change\nwrites one event row (same transaction)",
+            fontsize=8.5, color=PURPLE, va="center")
+    ax.text(8.9, 1.4, "Powers:\n - the manager's live activity feed\n - each application's timeline\n"
+            " - later: an audit trail of agent actions", fontsize=8.5, color=MUTED, va="center")
     ax.set_title("Database tables after Move 4 (arrows = foreign keys / writes)", loc="left",
                  fontsize=13, color=INK, fontweight="bold")
     save(fig, "move4_tables.png")

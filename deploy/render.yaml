@@ -15,3 +15,9 @@ services:
         value: team
       - key: APP_PASSWORD
         sync: false   # Render asks you for this; it's never stored in git
+    # Keep data across restarts (Move 4). Persistent disks need a paid instance type.
+    # The app already stores everything in DATA_DIR=/data, so mounting a disk there is all it takes.
+    # disk:
+    #   name: networker-data
+    #   mountPath: /data
+    #   sizeGB: 1

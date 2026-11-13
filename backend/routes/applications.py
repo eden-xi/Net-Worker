@@ -39,8 +39,7 @@ def apply(
         resume_file = resumes.read_valid_resume(resume.filename, content)
 
     # Name and email come from the signed-in session, so nobody can apply as someone else.
-    return applications.submit(db, project_id, employee.name, employee.email, skills.strip(),
-                               cover_letter.strip(), resume_file)
+    return applications.submit(db, project_id, employee, skills.strip(), cover_letter.strip(), resume_file)
 
 
 @router.get("/mine", response_model=list[MyApplication])
@@ -68,7 +67,7 @@ def attachment(application_id: int, db=Depends(get_db)):
     )
 
 
-@router.patch("/{application_id}/status", response_model=ApplicationStatusOut,
-              dependencies=[Depends(require_manager)])
-def change_status(application_id: int, change: ApplicationStatusChange, db=Depends(get_db)):
-    return applications.set_status(db, application_id, change.status)
+@router.patch("/{application_id}/status", response_model=ApplicationStatusOut)
+def change_status(application_id: int, change: ApplicationStatusChange, manager: User = Depends(require_manager),
+                  db=Depends(get_db)):
+    return applications.set_status(db, application_id, change.status, manager)

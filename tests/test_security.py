@@ -31,6 +31,7 @@ MANAGER_ROUTES = [
     ("GET", "/api/applications/1/document"),
     ("GET", "/api/applications/1/attachment"),
     ("PATCH", "/api/applications/1/status"),
+    ("GET", "/api/insights/activity"),
 ]
 
 

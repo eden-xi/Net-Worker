@@ -14,6 +14,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from backend.schemas.insights import TimelineStep
 from backend.schemas.projects import ProjectOut
 
 
@@ -49,6 +50,7 @@ class MyApplication(BaseModel):
     status: ApplicationStatus
     submitted_at: datetime
     updated_at: datetime
+    timeline: list[TimelineStep] = []
 
 
 class Applicant(BaseModel):

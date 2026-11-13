@@ -177,6 +177,20 @@ async def scenarios(base, employees_count, concurrency):
     results.append(await run("manager: all listings + counts", 200, concurrency,
                              lambda i: manager.get(MANAGER_LISTINGS)))
 
+    # Move 4: reviews write an activity row each; the feed is polled like the page does.
+    application_ids = []
+    for project in projects:
+        applicants = (await manager.get(f"/api/projects/{project['id']}/applications")).json()
+        application_ids += [applicant["application_id"] for applicant in applicants]
+    statuses = ["Under Review", "Accepted", "Rejected", "Submitted"]
+    results.append(await run("manager status changes (+ activity log)", 300, concurrency,
+                             lambda i: manager.patch(f"/api/applications/{application_ids[i % len(application_ids)]}/status",
+                                                     json={"status": statuses[i % len(statuses)]})))
+    results.append(await run("activity feed poll", 400, concurrency,
+                             lambda i: manager.get(f"/api/insights/activity?after_id={i}")))
+    results.append(await run("my applications + timelines", 300, concurrency,
+                             lambda i: employees[i % len(employees)].get("/api/applications/mine")))
+
     for client in employees + [manager]:
         await client.aclose()
     return results

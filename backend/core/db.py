@@ -14,6 +14,7 @@ missing columns, so an older database file keeps working.
 import sqlite3
 import threading
 from contextlib import contextmanager
+from datetime import datetime, timezone
 
 from backend.core import config
 from backend.schemas.applications import ApplicationStatus
@@ -121,6 +122,23 @@ TABLES = [
     """,
     "CREATE INDEX IF NOT EXISTS idx_applications_project ON applications(project_id)",
     "CREATE INDEX IF NOT EXISTS idx_applications_employee ON applications(employee_id)",
+    # Move 4: one row for every change anyone makes (the activity feed + application timelines).
+    """
+    CREATE TABLE IF NOT EXISTS activity_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind TEXT NOT NULL,
+        actor_email TEXT NOT NULL,
+        actor_name TEXT,
+        project_id INTEGER,
+        application_id INTEGER,
+        from_status TEXT,
+        to_status TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects(id),
+        FOREIGN KEY (application_id) REFERENCES applications(id)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_events_application ON activity_events(application_id)",
 ]
 
 # Columns added after the first version. Older database files get them on startup.
@@ -177,9 +195,19 @@ def normalize_statuses(connection):
                        tuple(ApplicationStatus))
 
 
+def data_since():
+    """When was this data folder first used? Written once, then only read.
+    On a persistent disk this date survives restarts; on a temporary disk it resets."""
+    marker = config.DATA_DIR / "data_created.txt"
+    if not marker.exists():
+        marker.write_text(datetime.now(timezone.utc).isoformat())
+    return marker.read_text().strip()
+
+
 def create_tables():
     """Build or upgrade the database. Safe to run any number of times."""
     config.ensure_data_folders()
+    data_since()
     connection = connect()
 
     try:

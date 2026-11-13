@@ -9,8 +9,9 @@ import sqlite3
 from backend.core.db import transaction
 from backend.core.errors import Conflict, NotFound
 from backend.schemas.applications import ApplicationStatus
+from backend.schemas.insights import ActivityKind
 from backend.schemas.projects import ProjectStatus
-from backend.services import projects, resumes
+from backend.services import activity, projects, resumes
 
 # ------------------------------------------
 # 1. Applying
@@ -36,11 +37,10 @@ def save_employee(db, existing, name, email, skills, resume_filename, resume_tex
     return cursor.lastrowid
 
 
-def submit(db, project_id, name, email, skills, cover_letter, resume=None):
-    """Apply to an Open listing. resume is a resumes.ResumeFile or None.
-
-    Without a new resume, the one already on the employee's profile is reused.
-    """
+def submit(db, project_id, applicant, skills, cover_letter, resume=None):
+    """applicant (the signed-in User) applies to an Open listing.
+    resume is a resumes.ResumeFile or None; without one, the resume on their profile is reused."""
+    name, email = applicant.name, applicant.email
     project = projects.get(db, project_id)
     if project["status"] != ProjectStatus.OPEN:
         raise NotFound("This project is no longer open.")
@@ -73,6 +73,8 @@ def submit(db, project_id, name, email, skills, cover_letter, resume=None):
                 INSERT INTO applications (employee_id, project_id, application_status, resume_filename, cover_letter)
                 VALUES (?, ?, ?, ?, ?)
             """, (employee_id, project_id, ApplicationStatus.SUBMITTED, resume_filename, cover_letter))
+            activity.record(db, ActivityKind.APPLICATION_SUBMITTED, applicant, project_id=project_id,
+                            application_id=cursor.lastrowid, to_status=ApplicationStatus.SUBMITTED)
 
     except sqlite3.IntegrityError:
         # Two clicks at the same moment: the database's UNIQUE rule caught the second one.
@@ -96,7 +98,7 @@ def submit(db, project_id, name, email, skills, cover_letter, resume=None):
 # ------------------------------------------
 
 def list_for_email(db, email):
-    """'My applications' for one person."""
+    """'My applications' for one person, each with its timeline (Submitted -> ... -> decision)."""
     rows = db.execute("""
         SELECT applications.id AS application_id, projects.id AS project_id,
                projects.title AS project_title, projects.client_project, projects.location,
@@ -108,7 +110,12 @@ def list_for_email(db, email):
         WHERE employees.email = ?
         ORDER BY applications.submitted_at DESC, applications.id DESC
     """, (email,)).fetchall()
-    return [dict(row) for row in rows]
+
+    mine = [dict(row) for row in rows]
+    steps = activity.timelines(db, [item["application_id"] for item in mine])
+    for item in mine:
+        item["timeline"] = steps[item["application_id"]]
+    return mine
 
 
 def list_for_project(db, project_id):
@@ -179,11 +186,13 @@ def attachment_path(db, application_id):
 # 3. Reviewing
 # ------------------------------------------
 
-def set_status(db, application_id, status):
+def set_status(db, application_id, status, actor):
+    application = find(db, application_id)               # NotFound if it doesn't exist
     with transaction(db):
-        cursor = db.execute("""
+        db.execute("""
             UPDATE applications SET application_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
         """, (status, application_id))
-        if cursor.rowcount == 0:
-            raise NotFound("Application not found.")
+        activity.record(db, ActivityKind.APPLICATION_STATUS, actor, project_id=application["project_id"],
+                        application_id=application_id, from_status=application["application_status"],
+                        to_status=status)
     return {"application_id": application_id, "status": status}

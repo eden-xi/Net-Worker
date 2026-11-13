@@ -1,0 +1,96 @@
+{
+  "move": "move4",
+  "concurrency": 25,
+  "scenarios": [
+    {
+      "name": "sign in (distinct employees)",
+      "requests": 150,
+      "errors": 0,
+      "p50_ms": 74.9,
+      "p95_ms": 85.8,
+      "max_ms": 98.1,
+      "per_second": 284.2
+    },
+    {
+      "name": "browse open listings",
+      "requests": 400,
+      "errors": 0,
+      "p50_ms": 47.8,
+      "p95_ms": 63.7,
+      "max_ms": 82.2,
+      "per_second": 462.4
+    },
+    {
+      "name": "open one listing",
+      "requests": 400,
+      "errors": 0,
+      "p50_ms": 44.4,
+      "p95_ms": 60.6,
+      "max_ms": 83.8,
+      "per_second": 482.8
+    },
+    {
+      "name": "apply with PDF (writes)",
+      "requests": 150,
+      "errors": 0,
+      "p50_ms": 97.5,
+      "p95_ms": 156.4,
+      "max_ms": 190.1,
+      "per_second": 229.6
+    },
+    {
+      "name": "no sign-in -> must be 401",
+      "requests": 300,
+      "errors": 0,
+      "p50_ms": 73.8,
+      "p95_ms": 268.3,
+      "max_ms": 529.8,
+      "per_second": 225.7
+    },
+    {
+      "name": "employee -> manager route -> must be 403",
+      "requests": 300,
+      "errors": 0,
+      "p50_ms": 40.8,
+      "p95_ms": 47.4,
+      "max_ms": 51.3,
+      "per_second": 535.3
+    },
+    {
+      "name": "manager: all listings + counts",
+      "requests": 200,
+      "errors": 0,
+      "p50_ms": 80.5,
+      "p95_ms": 314.7,
+      "max_ms": 640.5,
+      "per_second": 204.5
+    },
+    {
+      "name": "manager status changes (+ activity log)",
+      "requests": 300,
+      "errors": 0,
+      "p50_ms": 111.2,
+      "p95_ms": 341.9,
+      "max_ms": 655.7,
+      "per_second": 164.6
+    },
+    {
+      "name": "activity feed poll",
+      "requests": 400,
+      "errors": 0,
+      "p50_ms": 97.3,
+      "p95_ms": 317.2,
+      "max_ms": 636.4,
+      "per_second": 187.3
+    },
+    {
+      "name": "my applications + timelines",
+      "requests": 300,
+      "errors": 0,
+      "p50_ms": 72.5,
+      "p95_ms": 97.4,
+      "max_ms": 107.0,
+      "per_second": 340.7
+    }
+  ]
+}

@@ -38,7 +38,7 @@ def all_listings(db=Depends(get_db)):
 
 @router.post("", response_model=ProjectOut, status_code=201)
 def create_listing(listing: ProjectIn, manager: User = Depends(require_manager), db=Depends(get_db)):
-    return projects.create(db, listing, manager.email, manager.name)
+    return projects.create(db, listing, manager)
 
 
 @router.post("/upload-csv", response_model=CsvImportResult, dependencies=[Depends(require_manager)])
@@ -51,9 +51,10 @@ def one_listing(project_id: int, db=Depends(get_db)):
     return projects.get(db, project_id)
 
 
-@router.patch("/{project_id}/status", response_model=ProjectOut, dependencies=[Depends(require_manager)])
-def change_status(project_id: int, change: ProjectStatusChange, db=Depends(get_db)):
-    return projects.set_status(db, project_id, change.status)
+@router.patch("/{project_id}/status", response_model=ProjectOut)
+def change_status(project_id: int, change: ProjectStatusChange, manager: User = Depends(require_manager),
+                  db=Depends(get_db)):
+    return projects.set_status(db, project_id, change.status, manager)
 
 
 @router.get("/{project_id}/applications", response_model=list[Applicant], dependencies=[Depends(require_manager)])

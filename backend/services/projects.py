@@ -12,7 +12,9 @@ from uuid import uuid4
 
 from backend.core.db import transaction
 from backend.core.errors import Invalid, NotFound
+from backend.schemas.insights import ActivityKind
 from backend.schemas.projects import ProjectStatus
+from backend.services import activity
 
 # ------------------------------------------
 # 1. Reading listings
@@ -50,8 +52,8 @@ def list_for_managers(db):
 # 2. Changing listings
 # ------------------------------------------
 
-def create(db, listing, poster_email, poster_name):
-    """listing is a schemas.projects.ProjectIn (already validated and trimmed)."""
+def create(db, listing, manager):
+    """listing is a schemas.projects.ProjectIn (already validated and trimmed); manager is the User."""
     role_id = f"MP-{uuid4().hex[:8].upper()}"
     with transaction(db):
         cursor = db.execute("""
@@ -61,15 +63,18 @@ def create(db, listing, poster_email, poster_name):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (role_id, listing.title, listing.client_project, listing.required_skills,
               listing.nice_to_have_skills, listing.seniority, listing.location, listing.start_date,
-              ProjectStatus.OPEN, listing.description, poster_email, poster_name))
+              ProjectStatus.OPEN, listing.description, manager.email, manager.name))
+        activity.record(db, ActivityKind.LISTING_POSTED, manager, project_id=cursor.lastrowid,
+                        to_status=ProjectStatus.OPEN)
     return get(db, cursor.lastrowid)
 
 
-def set_status(db, project_id, status):
+def set_status(db, project_id, status, actor):
+    old_status = get(db, project_id)["status"]          # NotFound if it doesn't exist
     with transaction(db):
-        cursor = db.execute("UPDATE projects SET status = ? WHERE id = ?", (status, project_id))
-        if cursor.rowcount == 0:
-            raise NotFound("Project not found.")
+        db.execute("UPDATE projects SET status = ? WHERE id = ?", (status, project_id))
+        activity.record(db, ActivityKind.LISTING_STATUS, actor, project_id=project_id,
+                        from_status=old_status, to_status=status)
     return get(db, project_id)
 
 

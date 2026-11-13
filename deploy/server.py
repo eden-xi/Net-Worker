@@ -24,7 +24,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.app import api
 from backend.core import config
-from backend.core.db import connect, create_tables
+from backend.core.db import connect, create_tables, data_since
 from backend.services import projects
 
 FRONTEND = config.ROOT / "frontend"
@@ -50,6 +50,7 @@ def load_demo_projects():
 async def lifespan(app):
     create_tables()
     load_demo_projects()
+    print(f"Data folder: {config.DATA_DIR} (kept since {data_since()})")
     yield
 
 
