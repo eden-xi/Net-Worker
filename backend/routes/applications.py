@@ -2,7 +2,9 @@
 Application endpoints, served under /api/applications.
 
   POST  /api/applications                    employee: apply (form + optional resume file)
-  GET   /api/applications/mine               employee: "My applications"
+  GET   /api/applications/mine               employee: "My applications" (with timelines)
+  GET   /api/applications/profile            employee: my skills + whether a resume is on file
+  PUT   /api/applications/profile            employee: save my skills (powers "% match")
   GET   /api/applications/{id}/document      manager: viewer data (listing + applicant)
   GET   /api/applications/{id}/attachment    manager: the submitted file itself
   PATCH /api/applications/{id}/status        manager: Submitted / Under Review / Accepted / Rejected
@@ -18,7 +20,7 @@ from backend.core.db import get_db
 from backend.core.security import require_employee, require_manager
 from backend.schemas.applications import (ApplicationDocument, ApplicationReceipt, ApplicationStatusChange,
                                           ApplicationStatusOut, MyApplication)
-from backend.schemas.users import User
+from backend.schemas.users import ProfileIn, ProfileOut, User
 from backend.services import applications, resumes
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
@@ -45,6 +47,16 @@ def apply(
 @router.get("/mine", response_model=list[MyApplication])
 def my_applications(employee: User = Depends(require_employee), db=Depends(get_db)):
     return applications.list_for_email(db, employee.email)
+
+
+@router.get("/profile", response_model=ProfileOut)
+def my_profile(employee: User = Depends(require_employee), db=Depends(get_db)):
+    return applications.get_profile(db, employee)
+
+
+@router.put("/profile", response_model=ProfileOut)
+def save_my_profile(profile: ProfileIn, employee: User = Depends(require_employee), db=Depends(get_db)):
+    return applications.save_profile(db, employee, profile.skills)
 
 
 @router.get("/{application_id}/document", response_model=ApplicationDocument,

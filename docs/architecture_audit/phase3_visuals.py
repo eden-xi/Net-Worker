@@ -338,6 +338,34 @@ def results_chart(move):
     save(fig, f"{move}_load.png")
 
 
+def trend_chart():
+    """Apply-with-PDF latency across the moves (one measure, one axis)."""
+    moves, p50, p95 = [], [], []
+    for move in MOVE_NOTES:
+        path = OUT / f"{move}_load.json"
+        if path.exists():
+            apply = next(item for item in json.loads(path.read_text())["scenarios"] if item["name"].startswith("apply"))
+            moves.append(move.replace("move", "Move "))
+            p50.append(apply["p50_ms"])
+            p95.append(apply["p95_ms"])
+    fig, ax = plt.subplots(figsize=(9, 3.6))
+    ax.plot(moves, p95, color=PURPLE, linewidth=2, marker="o", markersize=8, label="slowest 5% (p95)")
+    ax.plot(moves, p50, color=PURPLE_LIGHT, linewidth=2, marker="o", markersize=8, label="median (p50)")
+    for x, value in zip(moves, p95):
+        ax.annotate(f"{value:.0f} ms", (x, value), textcoords="offset points", xytext=(0, 9), ha="center",
+                    fontsize=8.5, color=INK)
+    ax.set_ylabel("ms (25 applies at once)")
+    ax.set_ylim(0, max(p95) * 1.3)
+    ax.grid(axis="y", color=GRID, linewidth=0.6)
+    ax.set_axisbelow(True)
+    ax.legend(frameon=False, fontsize=8.5, loc="upper right")
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.set_title("Apply with a PDF: response time after each move", loc="left", fontsize=12, color=INK,
+                 fontweight="bold")
+    save(fig, "trend_apply.png")
+
+
 # ------------------------------------------
 # 6. Agent + MCP plan (diagram only, nothing is built)
 # ------------------------------------------
@@ -389,6 +417,7 @@ def main(target):
                 tables_diagram()
     if target in ("after", "all"):
         line_count_chart(code_line_counts(), "Code file sizes on phase3 (after)", "line_counts_after.png")
+        trend_chart()
     if target in ("agent", "all"):
         agent_plan()
 

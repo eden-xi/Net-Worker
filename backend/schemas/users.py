@@ -4,11 +4,12 @@ Data shapes for people and logins.
   Role           employee (seeking projects) or manager (posting projects / admin)
   User           who is signed in. Kept in the session; never taken from a form.
   LoginRequest   what the login wall sends
+  ProfileIn/Out  an employee's skills (used for "% match") and whether a resume is on file
 """
 
 from enum import StrEnum
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class Role(StrEnum):
@@ -40,3 +41,13 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     user: User
     login_mode: str
+
+
+class ProfileIn(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    skills: str = Field("", max_length=500)
+
+
+class ProfileOut(BaseModel):
+    skills: str
+    resume_on_file: bool

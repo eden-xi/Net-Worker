@@ -1,0 +1,97 @@
+/* ==========================================
+   DESIGN TOKENS
+   Every color, size and spacing value lives here. Other CSS files only use var(--...).
+   Light theme by default; [data-theme="dark"] on <html> switches to dark.
+   Purple is kept for meaning only: primary actions, focus, the active page.
+   ========================================== */
+
+:root {
+    /* brand */
+    --accent: #7A1FD1;
+    --accent-strong: #6516B0;
+    --accent-soft: #F3EAFC;
+    --accent-ink: #5B139E;
+    --on-accent: #FFFFFF;
+
+    /* surfaces (flat: no gradients, no glows) */
+    --bg: #F6F5F9;
+    --surface: #FFFFFF;
+    --surface-2: #FAF9FC;
+    --surface-hover: #F4F1F9;
+    --border: #E6E3EC;
+    --border-strong: #D3CEDD;
+
+    /* text */
+    --text: #1F1D29;
+    --text-2: #575366;
+    --text-3: #8A8697;
+
+    /* status (always shown with a word, never color alone) */
+    --ok: #1B7F50;      --ok-soft: #E5F4EC;
+    --warn: #9A6212;    --warn-soft: #FBF0DC;
+    --bad: #B83232;     --bad-soft: #FBE9E9;
+    --info: #2763C6;    --info-soft: #E7EFFC;
+    --neutral: #5E5A6B; --neutral-soft: #EFEDF3;
+
+    /* shape and depth */
+    --radius-sm: 6px;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --shadow-1: 0 1px 2px rgba(25, 18, 45, 0.06);
+    --shadow-2: 0 8px 28px rgba(25, 18, 45, 0.12);
+    --focus-ring: 0 0 0 3px rgba(122, 31, 209, 0.25);
+
+    /* spacing: a 4px grid */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* type: one scale */
+    --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+    --text-xs: 12px;
+    --text-sm: 13px;
+    --text-md: 14px;
+    --text-lg: 16px;
+    --text-xl: 20px;
+    --text-2xl: 28px;
+
+    --sidebar-width: 232px;
+    --speed: 150ms;
+}
+
+:root[data-theme="dark"] {
+    --accent: #A35BEF;
+    --accent-strong: #B57AF4;
+    --accent-soft: #2A1F3D;
+    --accent-ink: #D2B1F8;
+    --on-accent: #FFFFFF;
+
+    --bg: #0F0D16;
+    --surface: #17141F;
+    --surface-2: #1C1926;
+    --surface-hover: #221E2E;
+    --border: #2A2638;
+    --border-strong: #3A3549;
+
+    --text: #F2F0F7;
+    --text-2: #B3AEC2;
+    --text-3: #847F94;
+
+    --ok: #5BD49C;      --ok-soft: #173326;
+    --warn: #E7B45A;    --warn-soft: #3A2C14;
+    --bad: #F08080;     --bad-soft: #3B1C1E;
+    --info: #7FA9F0;    --info-soft: #1A2740;
+    --neutral: #B3AEC2; --neutral-soft: #26222F;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.5);
+    --focus-ring: 0 0 0 3px rgba(163, 91, 239, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root { --speed: 0ms; }
+}

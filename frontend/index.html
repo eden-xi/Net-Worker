@@ -1,45 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Net-Worker Marketplace</title>
-    <link rel="stylesheet" href="styles.css">
-
-    <!-- Order matters: shared components first, then the two dashboards, then the router. -->
-    <script defer src="js/components.js"></script>
-    <script defer src="js/employee.js"></script>
-    <script defer src="js/manager.js"></script>
-    <script defer src="js/app.js"></script>
+    <title>Net-Worker</title>
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/views.css">
 </head>
 <body>
 
 <!-- ==========================================
-     LOGIN WALL (shown until someone signs in)
+     LOGIN WALL: pick a role, then sign in
      ========================================== -->
 <div id="login-wall" class="login-wall hidden">
-    <div class="login-panel">
-        <div class="brand">
-            <span class="brand-mark">N</span>
-            <div>
-                <h1>Net-Worker</h1>
-                <p class="muted">Internal project marketplace</p>
-            </div>
+    <div class="login-card">
+        <div class="brand"><span class="brand-mark">N</span>Net-Worker</div>
+        <div>
+            <h1>Internal project marketplace</h1>
+            <p class="muted">Find your next project, or staff yours.</p>
         </div>
 
         <div id="role-options" class="role-options">
-            <p class="muted">How are you using Net-Worker today?</p>
-
-            <button type="button" class="role-card" data-role-option="employee">
-                <span class="role-tag">Option A</span>
-                <strong>Employee</strong>
-                <span class="muted">Seeking projects: browse listings and apply.</span>
+            <button type="button" class="role-option" data-role-option="employee">
+                <span class="role-icon" data-icon="search"></span>
+                <span><strong>Employee</strong><small>Find projects that fit your skills and apply</small></span>
             </button>
-
-            <button type="button" class="role-card" data-role-option="manager">
-                <span class="role-tag">Option B</span>
-                <strong>Project Manager</strong>
-                <span class="muted">Posting projects: create listings, manage them, review applicants.</span>
+            <button type="button" class="role-option" data-role-option="manager">
+                <span class="role-icon" data-icon="briefcase"></span>
+                <span><strong>Project Manager</strong><small>Post projects and review applicants</small></span>
             </button>
         </div>
 
@@ -48,43 +38,51 @@
             <label>Work email <input id="login-email" type="email" required autocomplete="username"></label>
             <label>Password <input id="login-password" type="password" required autocomplete="current-password"></label>
             <p id="login-hint" class="hint"></p>
-            <button type="submit" class="primary-button">Sign in</button>
-            <button type="button" id="login-back" class="link-button">Back to options</button>
+            <button type="submit" class="button primary">Sign in</button>
+            <button type="button" id="login-back" class="button ghost">Back to options</button>
         </form>
 
-        <p id="login-status" class="status-text"></p>
+        <p id="login-status" class="status-text" role="status"></p>
     </div>
 </div>
 
 <!-- ==========================================
-     APP SHELL (one shell; the router fills it with the right dashboard)
+     APP SHELL: left rail (pages for this role) + main area
      ========================================== -->
 <div id="app-shell" class="app-shell hidden">
-    <header class="topbar">
-        <div class="brand small">
-            <span class="brand-mark">N</span>
-            <strong>Net-Worker</strong>
+    <aside class="sidebar">
+        <div class="brand"><span class="brand-mark">N</span>Net-Worker</div>
+        <nav id="dashboard-nav" class="nav" aria-label="Pages"></nav>
+        <div class="sidebar-footer">
+            <div class="user-chip">
+                <span id="user-avatar" class="avatar"></span>
+                <span><strong id="user-name"></strong><span id="user-role" class="role-badge"></span></span>
+            </div>
+            <button type="button" id="theme-toggle" class="button ghost small">Dark mode</button>
+            <button type="button" id="logout-button" class="button secondary small">Sign out</button>
         </div>
-        <nav id="dashboard-nav" class="dashboard-nav"></nav>
-        <div class="user-chip">
-            <span id="user-name"></span>
-            <span id="user-role" class="role-badge"></span>
-            <button type="button" id="logout-button" class="secondary-button">Sign out</button>
-        </div>
-    </header>
-
-    <main id="dashboard-root" class="dashboard-root"></main>
+    </aside>
+    <main id="dashboard-root" class="main"></main>
 </div>
 
-<!-- ==========================================
-     POP-UP (shared by both dashboards)
-     ========================================== -->
-<div id="modal" class="modal hidden">
-    <div class="modal-content">
-        <button type="button" id="modal-close" class="modal-close" aria-label="Close">&times;</button>
+<!-- Details drawer (listing details, apply form) -->
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-panel">
+        <button type="button" id="modal-close" class="icon-button modal-close" aria-label="Close">&times;</button>
         <div id="modal-body"></div>
     </div>
 </div>
 
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<!-- Order matters: shared code first, then the two dashboards, then the router. -->
+<script src="js/core/api.js"></script>
+<script src="js/core/ui.js"></script>
+<script src="js/core/components.js"></script>
+<script src="js/views/employee.js"></script>
+<script src="js/views/manager.js"></script>
+<script src="js/views/review.js"></script>
+<script src="js/views/activity.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>

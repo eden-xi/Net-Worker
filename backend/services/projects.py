@@ -14,6 +14,7 @@ from backend.core.db import transaction
 from backend.core.errors import Invalid, NotFound
 from backend.schemas.insights import ActivityKind
 from backend.schemas.projects import ProjectStatus
+from backend.matching import skill_match
 from backend.services import activity
 
 # ------------------------------------------
@@ -37,15 +38,30 @@ def get(db, project_id):
 
 
 def list_for_managers(db):
-    """Every listing in any status, with who posted it and how many people applied."""
+    """Every listing in any status, with who posted it and its applicant pipeline."""
     rows = db.execute("""
-        SELECT projects.*, COUNT(applications.id) AS applicant_count
+        SELECT projects.*,
+               COUNT(applications.id) AS applicant_count,
+               SUM(applications.application_status = 'Submitted') AS new_count,
+               SUM(applications.application_status = 'Under Review') AS review_count,
+               SUM(applications.application_status = 'Accepted') AS accepted_count,
+               SUM(applications.application_status = 'Rejected') AS rejected_count
         FROM projects
         LEFT JOIN applications ON applications.project_id = projects.id
         GROUP BY projects.id
         ORDER BY projects.created_at DESC, projects.id DESC
     """).fetchall()
-    return [dict(row) for row in rows]
+    # SUM() over no rows is NULL; show 0 instead.
+    return [{**dict(row), **{key: row[key] or 0 for key in
+             ("new_count", "review_count", "accepted_count", "rejected_count")}} for row in rows]
+
+
+def matches_for(db, profile):
+    """How well one person (profile: skills + resume_text) fits every Open listing."""
+    return [{"project_id": project["id"],
+             **skill_match.score(project["required_skills"], project["nice_to_have_skills"],
+                                 profile["skills"], profile["resume_text"])}
+            for project in list_open(db)]
 
 
 # ------------------------------------------

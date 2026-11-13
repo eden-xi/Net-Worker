@@ -8,6 +8,7 @@ import sqlite3
 
 from backend.core.db import transaction
 from backend.core.errors import Conflict, NotFound
+from backend.matching import skill_match
 from backend.schemas.applications import ApplicationStatus
 from backend.schemas.insights import ActivityKind
 from backend.schemas.projects import ProjectStatus
@@ -93,6 +94,26 @@ def submit(db, project_id, applicant, skills, cover_letter, resume=None):
     }
 
 
+def get_profile(db, user):
+    """The person's skills and resume text (empty if they have never applied or saved skills)."""
+    employee = find_employee(db, user.email)
+    if employee is None:
+        return {"skills": "", "resume_text": "", "resume_on_file": False}
+    return {"skills": employee["skills"] or "", "resume_text": employee["resume_text"] or "",
+            "resume_on_file": bool(employee["resume_filename"])}
+
+
+def save_profile(db, user, skills):
+    """Save the person's skills (creates their profile on first use). Keeps any resume on file."""
+    employee = find_employee(db, user.email)
+    with transaction(db):
+        if employee:
+            db.execute("UPDATE employees SET name = ?, skills = ? WHERE id = ?", (user.name, skills, employee["id"]))
+        else:
+            db.execute("INSERT INTO employees (name, email, skills) VALUES (?, ?, ?)", (user.name, user.email, skills))
+    return get_profile(db, user)
+
+
 # ------------------------------------------
 # 2. Reading applications
 # ------------------------------------------
@@ -119,8 +140,8 @@ def list_for_email(db, email):
 
 
 def list_for_project(db, project_id):
-    """Everyone who applied to one listing (manager view)."""
-    projects.get(db, project_id)                         # 404 if the listing does not exist
+    """Everyone who applied to one listing (manager view), each with their skill match."""
+    project = projects.get(db, project_id)               # 404 if the listing does not exist
     rows = db.execute("""
         SELECT applications.id AS application_id, employees.name, employees.email, employees.skills,
                employees.resume_text,
@@ -136,6 +157,8 @@ def list_for_project(db, project_id):
     for row in rows:
         applicant = dict(row)
         applicant["has_attachment"] = bool(resumes.attachment_type(applicant.pop("resume_filename")))
+        applicant["match"] = skill_match.score(project["required_skills"], project["nice_to_have_skills"],
+                                               applicant["skills"], applicant.pop("resume_text"))
         applicants.append(applicant)
     return applicants
 
@@ -157,6 +180,7 @@ def get_document(db, application_id):
     """Everything the manager's document viewer shows: application + listing + attachment link."""
     application = find(db, application_id)
     kind = resumes.attachment_type(application["resume_filename"])
+    project = projects.get(db, application["project_id"])
     return {
         "application_id": application["id"],
         "status": application["application_status"],
@@ -166,9 +190,11 @@ def get_document(db, application_id):
         "applicant_email": application["applicant_email"],
         "applicant_skills": application["applicant_skills"],
         "resume_text": application["resume_text"],
-        "project": projects.get(db, application["project_id"]),
+        "project": project,
         "attachment_type": kind,
         "attachment_url": f"/api/applications/{application_id}/attachment" if kind else "",
+        "match": skill_match.score(project["required_skills"], project["nice_to_have_skills"],
+                                   application["applicant_skills"], application["resume_text"]),
     }
 
 

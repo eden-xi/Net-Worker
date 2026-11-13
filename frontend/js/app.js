@@ -2,8 +2,8 @@
 // APP: login wall + role-based routing
 //
 // Addresses look like  #/employee/browse  or  #/manager/review
-//   role part -> which dashboard (must match the logged-in role)
-//   tab part  -> which tab inside it
+//   role part -> which dashboard (must match the signed-in role)
+//   page part -> which page inside it
 // The server enforces the real rules; this file only decides what to draw.
 // ==========================================
 
@@ -17,13 +17,14 @@ const ROLE_LABELS = {
     manager: "Project Manager"
 };
 
-let currentUser = null;      // { email, name, role } once logged in
+let currentUser = null;      // { email, name, role } once signed in
 let chosenRole = null;       // which option was clicked on the login wall
 
 // ---------- login wall ----------
 
 function showLoginWall(message = "") {
     currentUser = null;
+    stopPolling();
     closeModal();
     document.getElementById("app-shell").classList.add("hidden");
     document.getElementById("login-wall").classList.remove("hidden");
@@ -104,6 +105,26 @@ async function logout() {
     }
 }
 
+// ---------- light / dark (remembered in this browser only) ----------
+
+function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    document.getElementById("theme-toggle").textContent = theme === "dark" ? "Light mode" : "Dark mode";
+    try {
+        localStorage.setItem("networker-theme", theme);
+    } catch (error) {
+        /* private browsing: the choice just isn't remembered */
+    }
+}
+
+function savedTheme() {
+    try {
+        return localStorage.getItem("networker-theme") || "light";
+    } catch (error) {
+        return "light";
+    }
+}
+
 // ---------- routing ----------
 
 function enterApp(user) {
@@ -114,6 +135,7 @@ function enterApp(user) {
     document.getElementById("app-shell").classList.remove("hidden");
     document.getElementById("user-name").textContent = user.name;
     document.getElementById("user-role").textContent = ROLE_LABELS[user.role];
+    document.getElementById("user-avatar").textContent = initials(user.name);
     document.body.dataset.role = user.role;
 
     route();
@@ -123,26 +145,35 @@ function route() {
     if (!currentUser) return;
 
     const dashboard = DASHBOARDS[currentUser.role];
-    const [, role, tab] = location.hash.split("/");     // "#/manager/review" -> ["#", "manager", "review"]
-    const validTab = dashboard.tabs.some(item => item.id === tab);
+    const [, role, page] = location.hash.split("/");      // "#/manager/review" -> ["#", "manager", "review"]
+    const validPage = dashboard.tabs.some(item => item.id === page);
 
-    // Wrong dashboard for this role, or unknown tab: go to this role's first tab.
-    if (role !== currentUser.role || !validTab) {
+    // Wrong dashboard for this role, or unknown page: go to this role's first page.
+    if (role !== currentUser.role || !validPage) {
         location.replace(`#/${currentUser.role}/${dashboard.tabs[0].id}`);
         return;                                          // the hashchange event calls route() again
     }
 
     document.getElementById("dashboard-nav").innerHTML = dashboard.tabs.map(item => `
-        <a href="#/${currentUser.role}/${item.id}" class="nav-link ${item.id === tab ? "active" : ""}">${escapeHTML(item.label)}</a>
+        <a href="#/${currentUser.role}/${item.id}" class="nav-link ${item.id === page ? "active" : ""}"
+           ${item.id === page ? 'aria-current="page"' : ""}>${icon(item.icon)}${escapeHTML(item.label)}</a>
     `).join("");
 
+    stopPolling();                                       // the old page's timer must not keep running
     closeModal();
-    dashboard.show(tab, document.getElementById("dashboard-root"), currentUser);
+    window.scrollTo(0, 0);
+
+    // Each page draws into its OWN fresh box. If you leave a page before it finishes loading,
+    // its late answer lands in a box that is no longer on screen, instead of over the new page.
+    const box = document.createElement("div");
+    document.getElementById("dashboard-root").replaceChildren(box);
+    dashboard.show(page, box, currentUser);
 }
 
 // ---------- start ----------
 
 document.addEventListener("DOMContentLoaded", async () => {
+    document.querySelectorAll("[data-icon]").forEach(element => { element.innerHTML = icon(element.dataset.icon, 20); });
     document.querySelectorAll("[data-role-option]").forEach(button => {
         button.addEventListener("click", () => chooseRole(button.dataset.roleOption));
     });
@@ -151,9 +182,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("login-form").addEventListener("submit", submitLogin);
     document.getElementById("logout-button").addEventListener("click", logout);
     document.getElementById("modal-close").addEventListener("click", closeModal);
+    document.getElementById("modal").addEventListener("click", event => {
+        if (event.target.id === "modal") closeModal();                // click outside the drawer
+    });
+    document.addEventListener("keydown", event => { if (event.key === "Escape") closeModal(); });
+    document.getElementById("theme-toggle").addEventListener("click", () =>
+        applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
     window.addEventListener("hashchange", route);
+    applyTheme(savedTheme());
 
-    // Already logged in (cookie still valid)? Skip the wall.
+    // Already signed in (cookie still valid)? Skip the wall.
     try {
         const { user } = await apiFetch("/api/auth/me");
         enterApp(user);

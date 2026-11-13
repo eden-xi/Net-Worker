@@ -1,0 +1,114 @@
+{
+  "move": "move5",
+  "concurrency": 25,
+  "scenarios": [
+    {
+      "name": "sign in (distinct employees)",
+      "requests": 150,
+      "errors": 0,
+      "p50_ms": 68.4,
+      "p95_ms": 81.9,
+      "max_ms": 96.7,
+      "per_second": 304.5
+    },
+    {
+      "name": "browse open listings",
+      "requests": 400,
+      "errors": 0,
+      "p50_ms": 46.9,
+      "p95_ms": 67.5,
+      "max_ms": 85.7,
+      "per_second": 461.1
+    },
+    {
+      "name": "open one listing",
+      "requests": 400,
+      "errors": 0,
+      "p50_ms": 45.3,
+      "p95_ms": 59.7,
+      "max_ms": 74.5,
+      "per_second": 478.0
+    },
+    {
+      "name": "apply with PDF (writes)",
+      "requests": 150,
+      "errors": 0,
+      "p50_ms": 95.7,
+      "p95_ms": 141.1,
+      "max_ms": 176.8,
+      "per_second": 238.3
+    },
+    {
+      "name": "no sign-in -> must be 401",
+      "requests": 300,
+      "errors": 0,
+      "p50_ms": 65.6,
+      "p95_ms": 289.6,
+      "max_ms": 482.6,
+      "per_second": 234.3
+    },
+    {
+      "name": "employee -> manager route -> must be 403",
+      "requests": 300,
+      "errors": 0,
+      "p50_ms": 38.7,
+      "p95_ms": 44.9,
+      "max_ms": 55.8,
+      "per_second": 555.6
+    },
+    {
+      "name": "manager: all listings + counts",
+      "requests": 200,
+      "errors": 0,
+      "p50_ms": 84.8,
+      "p95_ms": 248.0,
+      "max_ms": 416.3,
+      "per_second": 214.8
+    },
+    {
+      "name": "manager status changes (+ activity log)",
+      "requests": 300,
+      "errors": 0,
+      "p50_ms": 105.8,
+      "p95_ms": 336.5,
+      "max_ms": 477.8,
+      "per_second": 172.8
+    },
+    {
+      "name": "activity feed poll",
+      "requests": 400,
+      "errors": 0,
+      "p50_ms": 95.6,
+      "p95_ms": 283.3,
+      "max_ms": 628.1,
+      "per_second": 202.7
+    },
+    {
+      "name": "my applications + timelines",
+      "requests": 300,
+      "errors": 0,
+      "p50_ms": 46.0,
+      "p95_ms": 69.5,
+      "max_ms": 92.5,
+      "per_second": 466.0
+    },
+    {
+      "name": "employee: % match for all listings",
+      "requests": 400,
+      "errors": 0,
+      "p50_ms": 49.1,
+      "p95_ms": 69.4,
+      "max_ms": 105.5,
+      "per_second": 447.4
+    },
+    {
+      "name": "manager: applicants ranked by match",
+      "requests": 300,
+      "errors": 0,
+      "p50_ms": 85.1,
+      "p95_ms": 317.1,
+      "max_ms": 519.4,
+      "per_second": 202.0
+    }
+  ]
+}

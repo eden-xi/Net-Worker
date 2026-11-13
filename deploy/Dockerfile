@@ -22,6 +22,7 @@ COPY backend/core/*.py backend/core/
 COPY backend/schemas/*.py backend/schemas/
 COPY backend/services/*.py backend/services/
 COPY backend/routes/*.py backend/routes/
+COPY backend/matching/*.py backend/matching/
 COPY frontend/ frontend/
 COPY deploy/*.py deploy/*.csv deploy/
 

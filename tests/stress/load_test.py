@@ -51,18 +51,21 @@ def free_port():
         return sock.getsockname()[1]
 
 
-def start_server(port):
+def start_server(port, login_mode="open"):
     env = {
         **os.environ,
         "DATA_DIR": tempfile.mkdtemp(prefix="networker-stress-"),
         "APP_USERNAME": TEAM_PASSWORD[0],
         "APP_PASSWORD": TEAM_PASSWORD[1],
-        "MARKETPLACE_LOGIN_MODE": "open",
+        "MARKETPLACE_LOGIN_MODE": login_mode,
         "PYTHONDONTWRITEBYTECODE": "1",
     }
     env.pop("ALLOW_NO_AUTH", None)
     process = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", SERVER_APP, "--port", str(port), "--log-level", "warning"],
+        # Keep idle connections open for 30 s. With uvicorn's default (5 s) the server can close a
+        # connection at the same moment the test client reuses it; browsers retry that, httpx does not.
+        [sys.executable, "-m", "uvicorn", SERVER_APP, "--port", str(port), "--log-level", "warning",
+         "--timeout-keep-alive", "30"],
         cwd=ROOT, env=env,
     )
     for _ in range(100):
@@ -79,9 +82,9 @@ def start_server(port):
 # 2. Helpers
 # ------------------------------------------
 
-def make_pdf():
+def make_pdf(text="Stress resume: Python, FastAPI, SQL, Docker"):
     document = fitz.open()
-    document.new_page().insert_text((72, 72), "Stress resume: Python, FastAPI, SQL, Docker")
+    document.new_page().insert_text((72, 72), text)
     data = document.tobytes()
     document.close()
     return data
@@ -190,6 +193,12 @@ async def scenarios(base, employees_count, concurrency):
                              lambda i: manager.get(f"/api/insights/activity?after_id={i}")))
     results.append(await run("my applications + timelines", 300, concurrency,
                              lambda i: employees[i % len(employees)].get("/api/applications/mine")))
+
+    # Move 5: skill matching (scores every Open listing against the person's skills + resume text).
+    results.append(await run("employee: % match for all listings", 400, concurrency,
+                             lambda i: employees[i % len(employees)].get("/api/insights/matches")))
+    results.append(await run("manager: applicants ranked by match", 300, concurrency,
+                             lambda i: manager.get(f"/api/projects/{projects[i % len(projects)]['id']}/applications")))
 
     for client in employees + [manager]:
         await client.aclose()

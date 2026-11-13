@@ -61,6 +61,10 @@ class ProjectOut(BaseModel):
 class ManagedProjectOut(ProjectOut):
     posted_by_name: str | None = None
     applicant_count: int
+    new_count: int = 0              # pipeline: Submitted
+    review_count: int = 0           #           Under Review
+    accepted_count: int = 0
+    rejected_count: int = 0
 
 
 class ProjectStatusChange(BaseModel):

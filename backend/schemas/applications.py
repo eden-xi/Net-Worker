@@ -14,7 +14,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from backend.schemas.insights import TimelineStep
+from backend.schemas.insights import SkillMatch, TimelineStep
 from backend.schemas.projects import ProjectOut
 
 
@@ -61,6 +61,7 @@ class Applicant(BaseModel):
     status: ApplicationStatus
     submitted_at: datetime
     has_attachment: bool
+    match: SkillMatch
 
 
 class ApplicationDocument(BaseModel):
@@ -75,3 +76,4 @@ class ApplicationDocument(BaseModel):
     project: ProjectOut
     attachment_type: Literal["pdf", "docx", ""]
     attachment_url: str
+    match: SkillMatch
