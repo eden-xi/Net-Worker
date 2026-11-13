@@ -44,7 +44,7 @@ async function apiFetch(url, options = {}) {
         body = null;
     }
 
-    if (response.status === 401 && !url.startsWith("/mp/auth/")) {
+    if (response.status === 401 && !url.startsWith("/api/auth/")) {
         showLoginWall("Your session ended. Please log in again.");
     }
 
@@ -105,7 +105,7 @@ function ProjectMetadata(project) {
         ["Seniority", project.seniority],
         ["Location", project.location],
         ["Start date", project.start_date],
-        ["Status", project.status || project.project_status]
+        ["Status", project.status]
     ];
 
     return `
@@ -153,7 +153,7 @@ async function renderJobFeed(container, options) {
     let projects = [];
 
     try {
-        projects = await apiFetch("/api/projects");          // the team's existing endpoint
+        projects = await apiFetch("/api/projects");          // Open listings only
     } catch (error) {
         grid.innerHTML = `<p class="status-text error">${escapeHTML(error.message)}</p>`;
         return;

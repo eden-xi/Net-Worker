@@ -1,11 +1,12 @@
 # deploy/ — container + hosting add-on
 
-Everything for running Net-Worker in a container lives here. No group files are changed.
-(The one exception is `/.gitignore` at the repo root: git only applies it there.)
+Everything for running Net-Worker in a container lives here.
+On the `phase3` branch, `server.py` is the one server: it serves `frontend/` and mounts the
+API from `backend/app.py` at `/api`. Settings live in `backend/core/config.py`.
 
 | File | What it does |
 |---|---|
-| `server.py` | Wraps the existing app: serves frontend + API (`/api`), password gate, keeps data in `DATA_DIR`, loads demo projects |
+| `server.py` | The one server: frontend + API (`/api`), team password, login rules, tables + demo data on startup |
 | `demo_projects.csv` | 10 fake projects loaded when the database is empty |
 | `Dockerfile` | Builds the container (copies only code, never the real DB or resumes) |
 | `Dockerfile.dockerignore` | Extra safety net for the build |
@@ -24,6 +25,9 @@ then open http://localhost:8000 (user `team`, password `localtest`).
 pip install -r deploy/requirements.txt
 $env:ALLOW_NO_AUTH="1"; $env:PYTHONDONTWRITEBYTECODE="1"; uvicorn deploy.server:app --reload
 ```
+
+**Tests:** `python -m pytest -q` (unit + API), `python tests/stress/load_test.py --move moveN`
+(concurrent load), `python tests/stress/ui_walkthrough.py --move moveN` (Edge, end to end).
 
 ## Live site (Render, free)
 

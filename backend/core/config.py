@@ -37,6 +37,16 @@ TEAM_PASSWORD = os.getenv("APP_PASSWORD", "")
 ALLOW_NO_PASSWORD = os.getenv("ALLOW_NO_AUTH") == "1"      # local testing only
 
 # ------------------------------------------
+# Logins (the marketplace login wall)
+# ------------------------------------------
+
+# "test": only the test accounts in security.py.  "open": any email + any non-empty password.
+LOGIN_MODE = os.getenv("MARKETPLACE_LOGIN_MODE", "test")
+SESSION_HOURS = 8
+COOKIE_NAME = "mp_session"
+COOKIE_SECURE = os.getenv("COOKIE_SECURE") == "1"          # set to 1 on HTTPS hosts like Render
+
+# ------------------------------------------
 # Demo data
 # ------------------------------------------
 

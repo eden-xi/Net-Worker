@@ -12,8 +12,12 @@ missing columns, so an older database file keeps working.
 """
 
 import sqlite3
+import threading
+from contextlib import contextmanager
 
 from backend.core import config
+from backend.schemas.applications import ApplicationStatus
+from backend.schemas.projects import ProjectStatus
 
 
 def connect():
@@ -33,6 +37,25 @@ def get_db():
         yield connection
     finally:
         connection.close()
+
+
+# SQLite lets only ONE request write at a time. Without this lock, requests that collide
+# sleep and retry on a timer, and a busy moment turns into multi-second waits.
+# With it, writers simply queue in order. (One lock per server process; we run one.)
+WRITE_LOCK = threading.Lock()
+
+
+@contextmanager
+def transaction(connection):
+    """Group writes:  with transaction(db): ...   One writer at a time, commit at the end,
+    and roll back everything inside the block if any error happens."""
+    with WRITE_LOCK:
+        try:
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
 
 
 # ------------------------------------------
@@ -136,6 +159,24 @@ def copy_old_marketplace_posters(connection):
         """)
 
 
+def normalize_statuses(connection):
+    """Older rows hold free text like 'open ' or 'OPEN'. Rewrite them to the exact enum values,
+    so the rest of the code can compare with  status = 'Open'  instead of LOWER(TRIM(status))."""
+    for status in ProjectStatus:
+        connection.execute("UPDATE projects SET status = ? WHERE LOWER(TRIM(status)) = LOWER(?)",
+                           (status, status))
+    # Blank means Open (the old default); anything unrecognised is hidden as Closed.
+    connection.execute("UPDATE projects SET status = 'Open' WHERE status IS NULL OR TRIM(status) = ''")
+    connection.execute("UPDATE projects SET status = 'Closed' WHERE status NOT IN (?, ?, ?)", tuple(ProjectStatus))
+
+    for status in ApplicationStatus:
+        connection.execute("UPDATE applications SET application_status = ? "
+                           "WHERE LOWER(TRIM(application_status)) = LOWER(?)", (status, status))
+    connection.execute("UPDATE applications SET application_status = 'Submitted' "
+                       "WHERE application_status IS NULL OR application_status NOT IN (?, ?, ?, ?)",
+                       tuple(ApplicationStatus))
+
+
 def create_tables():
     """Build or upgrade the database. Safe to run any number of times."""
     config.ensure_data_folders()
@@ -150,6 +191,7 @@ def create_tables():
 
         add_missing_columns(connection)
         copy_old_marketplace_posters(connection)
+        normalize_statuses(connection)
         connection.commit()
     finally:
         connection.close()

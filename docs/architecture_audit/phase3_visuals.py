@@ -121,10 +121,10 @@ def findings_chart():
 # 3. Layer diagrams: boxes stacked top to bottom, with notes on the right
 # ------------------------------------------
 
-def box(ax, x, y, w, h, title, subtitle="", fill=SURFACE, edge=GRID, title_color=INK):
+def box(ax, x, y, w, h, title, subtitle="", fill=SURFACE, edge=GRID, title_color=INK, title_size=10.5):
     ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.01,rounding_size=0.12",
                                 facecolor=fill, edgecolor=edge, linewidth=1.3))
-    ax.text(x + 0.18, y + h - 0.2, title, fontsize=10.5, fontweight="bold", color=title_color, va="top")
+    ax.text(x + 0.18, y + h - 0.2, title, fontsize=title_size, fontweight="bold", color=title_color, va="top")
     if subtitle:
         ax.text(x + 0.18, y + h - 0.55, subtitle, fontsize=8.3, color=MUTED, va="top", linespacing=1.35)
 
@@ -214,6 +214,55 @@ def architecture_after(move=None):
     rows = [(key, label, sub, notes.get(key, "")) for key, label, sub, _ in AFTER_ROWS]
     stack_diagram(f"{move}_layers.png", f"{move.replace('move', 'Move ')}: what changed (purple)", rows,
                   highlight=keys, note_color=PURPLE)
+
+
+def flow_diagram(name, title, steps, per_row=4):
+    """steps: [(title, subtitle)]. Numbered boxes, left to right, wrapping into rows."""
+    rows = (len(steps) + per_row - 1) // per_row
+    fig, ax = plt.subplots(figsize=(12, 2.1 * rows + 0.6))
+    ax.set_xlim(0, 13)
+    ax.set_ylim(0, 2.4 * rows)
+    ax.axis("off")
+    width, height = 2.75, 1.55
+    positions = []
+    for index, (label, subtitle) in enumerate(steps):
+        row, column = divmod(index, per_row)
+        x = 0.2 + column * 3.2
+        y = 2.4 * (rows - row - 1) + 0.4
+        positions.append((x, y))
+        box(ax, x, y, width, height, f"{index + 1}. {label}", subtitle, fill=HIGHLIGHT if index in (0, len(steps) - 1)
+            else SURFACE, edge=PURPLE if index in (0, len(steps) - 1) else GRID, title_size=9.2)
+    for (x1, y1), (x2, y2) in zip(positions, positions[1:]):
+        if abs(y1 - y2) < 0.01:
+            arrow(ax, x1 + width, y1 + height / 2, x2, y2 + height / 2)
+        else:
+            arrow(ax, x1 + width / 2, y1, x2 + width / 2, y2 + height)
+    ax.set_title(title, loc="left", fontsize=13, color=INK, fontweight="bold")
+    save(fig, name)
+
+
+FLOWS = {
+    "move2": ("One request, layer by layer: POST /api/applications", [
+        ("Browser", "employee.js sends the form\n+ PDF as FormData"),
+        ("routes/applications.py", "apply(): Form fields\nvalidated by FastAPI"),
+        ("services/resumes.py", "read_valid_resume():\ntype, size, real PDF?, text"),
+        ("services/applications.py", "submit(): listing open?\nalready applied?"),
+        ("core/db.py transaction()", "one writer at a time;\nprofile + application\nsaved together"),
+        ("SQLite + resume file", "rows in DATA_DIR;\nfile under a random name"),
+        ("schemas ApplicationReceipt", "response_model decides\nexactly what goes back"),
+        ("Browser", "201 + receipt JSON\n(errors: 400/404/409/413)"),
+    ]),
+    "move3": ("One request, layer by layer: PATCH /api/applications/7/status", [
+        ("Browser", "manager clicks Accept;\ncookie goes with it"),
+        ("deploy/server.py", "team password check\n(the browser pop-up)"),
+        ("Depends(current_user)", "cookie -> session -> User\nnone? 401 'Please log in'"),
+        ("Depends(require_manager)", "User.role == manager?\nno? 403"),
+        ("routes/applications.py", "change_status(): body\nvalidated by the schema"),
+        ("services/applications.py", "set_status(): UPDATE in\na transaction"),
+        ("schemas ApplicationStatusOut", "the response shape"),
+        ("Browser", "200: badge turns green"),
+    ]),
+}
 
 
 # ------------------------------------------
@@ -330,6 +379,8 @@ def main(target):
         if target in (move, "all"):
             architecture_after(move)
             results_chart(move)
+            if move in FLOWS:
+                flow_diagram(f"{move}_flow.png", *FLOWS[move])
             if move == "move4":
                 tables_diagram()
     if target in ("after", "all"):

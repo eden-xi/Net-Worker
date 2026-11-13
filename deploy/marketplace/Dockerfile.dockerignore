@@ -1,9 +1,0 @@
-# Extra safety net (the Dockerfile already copies only code files).
-# Docker reads this because it sits next to the Dockerfile with the same name.
-backend/database/*.db
-uploads/
-**/.localdata/
-.env
-.git/
-**/__pycache__/
-.venv/

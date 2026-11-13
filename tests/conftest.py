@@ -22,11 +22,11 @@ from backend.core import config
 from backend.core.db import create_tables
 
 # The full server (login wall + API + frontend), exactly what runs on Render.
-from marketplace.server import app as server_app
+from deploy.server import app as server_app
 
 TEST_PASSWORDS = {"employee": "employee-demo", "manager": "manager-demo"}
 TEST_EMAILS = {"employee": "employee@networker.test", "manager": "manager@networker.test"}
-AUTH = "/mp/auth"
+AUTH = "/api/auth"
 
 
 @pytest.fixture

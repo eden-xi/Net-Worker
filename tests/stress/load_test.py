@@ -34,9 +34,9 @@ ROOT = Path(__file__).resolve().parents[2]
 RESULTS = ROOT / "docs" / "architecture_audit" / "phase3_visuals"
 
 # These two lines change when the server's layout changes (see each move's PDF).
-SERVER_APP = "marketplace.server:app"
-AUTH = "/mp/auth"
-MANAGER_LISTINGS = "/mp/manager/projects"
+SERVER_APP = "deploy.server:app"
+AUTH = "/api/auth"
+MANAGER_LISTINGS = "/api/projects/manage"
 
 TEAM_PASSWORD = ("team", "stress-test")
 
@@ -161,7 +161,7 @@ async def scenarios(base, employees_count, concurrency):
     async def apply(i):
         client = employees[i]
         email = f"stress{i}@load.test"
-        return await client.post("/api/applications/submit-with-resume", data={
+        return await client.post("/api/applications", data={
             "project_id": projects[i % len(projects)]["id"], "name": f"Stress {i}", "email": email,
             "skills": "Python, SQL", "cover_letter": "Load test",
         }, files={"resume": ("cv.pdf", pdf, "application/pdf")})

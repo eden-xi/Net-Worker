@@ -46,7 +46,7 @@ function showEmployeeDetails(project, user) {
         .addEventListener("click", () => showApplyForm(project, user));
 }
 
-// ---------- Apply: sends the form + resume to the team's existing endpoint ----------
+// ---------- Apply: sends the form + resume to POST /api/applications ----------
 
 function showApplyForm(project, user) {
     openModal(`
@@ -76,7 +76,7 @@ function showApplyForm(project, user) {
 
         try {
             setStatus(status, "Submitting...");
-            const result = await apiFetch("/api/applications/submit-with-resume", {
+            const result = await apiFetch("/api/applications", {
                 method: "POST",
                 body: formData
             });
@@ -104,11 +104,11 @@ async function showMyApplications(root, user) {
     const box = document.getElementById("my-applications");
 
     try {
-        const result = await apiFetch(
-            `/api/applications/my-applications?email=${encodeURIComponent(user.email)}`
+        const applications = await apiFetch(
+            `/api/applications/mine?email=${encodeURIComponent(user.email)}`
         );
 
-        if (result.applications.length === 0) {
+        if (applications.length === 0) {
             box.innerHTML = `<p class="muted">No applications yet. Head to "Browse projects" to find one.</p>`;
             return;
         }
@@ -117,13 +117,13 @@ async function showMyApplications(root, user) {
             <table>
                 <thead><tr><th>Project</th><th>Client</th><th>Location</th><th>Status</th><th>Submitted</th></tr></thead>
                 <tbody>
-                    ${result.applications.map(item => `
+                    ${applications.map(item => `
                         <tr>
                             <td>${escapeHTML(item.project_title)}</td>
                             <td>${escapeHTML(item.client_project)}</td>
                             <td>${escapeHTML(item.location)}</td>
                             <td><span class="pill">${escapeHTML(item.status)}</span></td>
-                            <td>${escapeHTML(item.submitted_at)}</td>
+                            <td>${escapeHTML(new Date(item.submitted_at).toLocaleDateString())}</td>
                         </tr>
                     `).join("")}
                 </tbody>

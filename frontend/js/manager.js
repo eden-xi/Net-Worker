@@ -67,7 +67,7 @@ async function showManageListings(root) {
     let listings = [];
 
     try {
-        listings = await apiFetch("/mp/manager/projects");
+        listings = await apiFetch("/api/projects/manage");
     } catch (error) {
         box.innerHTML = `<p class="status-text error">${escapeHTML(error.message)}</p>`;
         return;
@@ -81,7 +81,7 @@ async function showManageListings(root) {
                     <tr>
                         <td>${escapeHTML(item.role_id)}</td>
                         <td>${escapeHTML(item.title)}</td>
-                        <td>${escapeHTML(item.posted_by || "CSV import")}</td>
+                        <td>${escapeHTML(item.posted_by_name || "CSV import")}</td>
                         <td>${Number(item.applicant_count)}</td>
                         <td>
                             <select data-status-for="${Number(item.id)}">
@@ -102,7 +102,7 @@ async function showManageListings(root) {
         if (!projectId) return;
 
         try {
-            await sendJSON(`/mp/manager/projects/${projectId}/status`, "PATCH", { status: event.target.value });
+            await sendJSON(`/api/projects/${projectId}/status`, "PATCH", { status: event.target.value });
             setStatus(document.getElementById("manage-status"), `Listing ${projectId} is now ${event.target.value}.`);
         } catch (error) {
             setStatus(document.getElementById("manage-status"), error.message, true);
@@ -151,7 +151,7 @@ function showCreateListing(root) {
         const status = document.getElementById("create-status");
 
         try {
-            const result = await sendJSON("/mp/manager/projects", "POST", Object.fromEntries(new FormData(form)));
+            const result = await sendJSON("/api/projects", "POST", Object.fromEntries(new FormData(form)));
             setStatus(status, `Published as ${result.role_id}. It is now in the shared feed.`);
             form.reset();
         } catch (error) {
@@ -181,7 +181,7 @@ async function showReview(root) {
     let listings = [];
 
     try {
-        listings = await apiFetch("/mp/manager/projects");
+        listings = await apiFetch("/api/projects/manage");
     } catch (error) {
         picker.innerHTML = `<option>${escapeHTML(error.message)}</option>`;
         return;
@@ -212,14 +212,14 @@ async function loadApplicants(projectId) {
     }
 
     try {
-        // The team's existing endpoint (now manager-only through the server's rule table).
+        // Manager-only: the server refuses this for employees.
         const applicants = await apiFetch(`/api/projects/${projectId}/applications`);
 
         list.innerHTML = applicants.length ? applicants.map(item => `
-            <button type="button" class="applicant" data-application-id="${Number(item.id)}">
+            <button type="button" class="applicant" data-application-id="${Number(item.application_id)}">
                 <strong>${escapeHTML(item.name)}</strong>
                 <span class="muted">${escapeHTML(item.email)}</span>
-                <span class="pill">${escapeHTML(item.application_status)}</span>
+                <span class="pill">${escapeHTML(item.status)}</span>
             </button>
         `).join("") : `<p class="muted">No applicants yet.</p>`;
 
@@ -257,25 +257,25 @@ async function openDocument(applicationId) {
     viewer.innerHTML = `<p class="muted">Opening...</p>`;
 
     try {
-        const doc = await apiFetch(`/mp/manager/applications/${applicationId}/document`);
+        const doc = await apiFetch(`/api/applications/${applicationId}/document`);
 
         viewer.innerHTML = `
             <div class="viewer-grid">
                 <div class="viewer-meta">
-                    ${ProjectMetadata(doc)}
+                    ${ProjectMetadata(doc.project)}
                     <div class="metadata">
                         <h3>Applicant</h3>
                         <dl>
                             <dt>Name</dt><dd>${escapeHTML(doc.applicant_name)}</dd>
                             <dt>Email</dt><dd>${escapeHTML(doc.applicant_email)}</dd>
                             <dt>Skills</dt><dd>${escapeHTML(doc.applicant_skills || "-")}</dd>
-                            <dt>Submitted</dt><dd>${escapeHTML(doc.submitted_at)}</dd>
+                            <dt>Submitted</dt><dd>${escapeHTML(new Date(doc.submitted_at).toLocaleString())}</dd>
                         </dl>
                         ${doc.cover_letter ? `<p class="description">${escapeHTML(doc.cover_letter)}</p>` : ""}
                         <label>Application status
                             <select id="application-status-select">
                                 ${["Submitted", "Under Review", "Accepted", "Rejected"].map(status => `
-                                    <option ${status === doc.application_status ? "selected" : ""}>${status}</option>
+                                    <option ${status === doc.status ? "selected" : ""}>${status}</option>
                                 `).join("")}
                             </select>
                         </label>
@@ -290,7 +290,6 @@ async function openDocument(applicationId) {
             const note = document.getElementById("application-status-note");
 
             try {
-                // The team's existing status endpoint.
                 await sendJSON(`/api/applications/${applicationId}/status`, "PATCH", { status: event.target.value });
                 setStatus(note, `Saved: ${event.target.value}.`);
 

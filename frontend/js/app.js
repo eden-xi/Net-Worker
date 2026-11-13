@@ -52,7 +52,7 @@ async function showTestAccountHint(role) {
     hint.innerHTML = "";
 
     try {
-        const { login_mode } = await apiFetch("/mp/auth/mode");
+        const { login_mode } = await apiFetch("/api/auth/mode");
 
         if (login_mode === "open") {
             hint.textContent = "Open demo mode: any email and password will work.";
@@ -81,7 +81,7 @@ async function submitLogin(event) {
 
     try {
         setStatus(status, "Signing in...");
-        const { user } = await sendJSON("/mp/auth/login", "POST", {
+        const { user } = await sendJSON("/api/auth/login", "POST", {
             email: document.getElementById("login-email").value,
             password: document.getElementById("login-password").value,
             role: chosenRole
@@ -97,7 +97,7 @@ async function submitLogin(event) {
 
 async function logout() {
     try {
-        await apiFetch("/mp/auth/logout", { method: "POST" });
+        await apiFetch("/api/auth/logout", { method: "POST" });
     } finally {
         location.hash = "";
         showLoginWall("You have been signed out.");
@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Already logged in (cookie still valid)? Skip the wall.
     try {
-        const { user } = await apiFetch("/mp/auth/me");
+        const { user } = await apiFetch("/api/auth/me");
         enterApp(user);
     } catch (error) {
         showLoginWall();

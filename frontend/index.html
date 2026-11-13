@@ -1,372 +1,89 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProjectHub | Project Marketplace</title>
+    <title>Net-Worker Marketplace</title>
     <link rel="stylesheet" href="styles.css">
-    <script defer src="app.js"></script>
+
+    <!-- Order matters: shared components first, then the two dashboards, then the router. -->
+    <script defer src="js/components.js"></script>
+    <script defer src="js/employee.js"></script>
+    <script defer src="js/manager.js"></script>
+    <script defer src="js/app.js"></script>
 </head>
 <body>
 
-<div class="app-container">
-
-    <aside class="sidebar">
+<!-- ==========================================
+     LOGIN WALL (shown until someone signs in)
+     ========================================== -->
+<div id="login-wall" class="login-wall hidden">
+    <div class="login-panel">
         <div class="brand">
-            <h2>ProjectHub</h2>
-            <p>Internal Project Marketplace</p>
+            <span class="brand-mark">N</span>
+            <div>
+                <h1>Net-Worker</h1>
+                <p class="muted">Internal project marketplace</p>
+            </div>
         </div>
 
-        <nav class="navigation">
-            <button class="nav-button active" data-view="browse">
-                Browse Projects
+        <div id="role-options" class="role-options">
+            <p class="muted">How are you using Net-Worker today?</p>
+
+            <button type="button" class="role-card" data-role-option="employee">
+                <span class="role-tag">Option A</span>
+                <strong>Employee</strong>
+                <span class="muted">Seeking projects: browse listings and apply.</span>
             </button>
 
-            <button class="nav-button" data-view="profile">
-                My Profile
+            <button type="button" class="role-card" data-role-option="manager">
+                <span class="role-tag">Option B</span>
+                <strong>Project Manager</strong>
+                <span class="muted">Posting projects: create listings, manage them, review applicants.</span>
             </button>
-
-            <button class="nav-button" data-view="recommended">
-                Recommended Projects
-            </button>
-
-            <button class="nav-button" data-view="my-applications">
-                My Applications
-            </button>
-
-            <div class="nav-divider"></div>
-
-            <button class="nav-button" data-view="manager">
-                Manager Dashboard
-            </button>
-        </nav>
-
-        <div class="sidebar-footer">
-            <p>ProjectHub v2.0</p>
-        </div>
-    </aside>
-
-
-    <main class="main-content">
-
-        <!-- BROWSE PROJECTS -->
-        <section id="browse-view" class="view">
-
-            <div class="page-header">
-                <h1>Browse Projects</h1>
-                <p>Explore available opportunities and find your next project.</p>
-            </div>
-
-            <div class="search-container">
-                <input
-                    type="text"
-                    id="project-search"
-                    placeholder="Search projects, skills, or job titles..."
-                >
-
-                <select id="location-filter">
-                    <option value="">All Locations</option>
-                </select>
-
-                <button id="search-button" class="primary-button">
-                    Search
-                </button>
-            </div>
-
-            <div class="stats-container">
-                <div class="stat-card">
-                    <h3 id="project-count">0</h3>
-                    <p>Available Projects</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3 id="match-count">0</h3>
-                    <p>Recommended Matches</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3 id="skill-count">0</h3>
-                    <p>Your Skills</p>
-                </div>
-            </div>
-
-            <div id="project-list" class="project-grid"></div>
-
-        </section>
-
-
-        <!-- PROFILE -->
-        <section id="profile-view" class="view hidden">
-
-            <div class="page-header">
-                <h1>My Profile</h1>
-                <p>Manage your employee information and skills.</p>
-            </div>
-
-            <div class="profile-card">
-
-                <h2>Your Skills</h2>
-
-                <p>Enter your skills separated by commas.</p>
-
-                <textarea
-                    id="employee-skills"
-                    placeholder="Example: SQL, Python, Excel, Power BI"
-                ></textarea>
-
-                <h2>Upload Resume</h2>
-
-                <input
-                    type="file"
-                    id="resume-file"
-                    accept=".pdf,.docx"
-                >
-
-                <p id="resume-status"></p>
-
-                <button id="save-profile" class="primary-button">
-                    Save Profile
-                </button>
-
-                <p id="profile-status"></p>
-
-            </div>
-
-        </section>
-
-
-        <!-- RECOMMENDATIONS -->
-        <section id="recommended-view" class="view hidden">
-
-            <div class="page-header">
-                <h1>Recommended Projects</h1>
-                <p>Explore projects that match your skills.</p>
-            </div>
-
-            <div id="recommended-list" class="project-grid"></div>
-
-        </section>
-
-
-        <!-- MY APPLICATIONS -->
-        <section id="my-applications-view" class="view hidden">
-
-            <div class="page-header">
-                <h1>My Applications</h1>
-                <p>Track the status of projects you have applied to.</p>
-            </div>
-
-            <div class="profile-card">
-
-                <h2>Find Your Applications</h2>
-
-                <p>
-                    Enter the same email address you used when submitting
-                    your project applications.
-                </p>
-
-                <div class="search-container">
-
-                    <input
-                        type="email"
-                        id="tracking-email"
-                        placeholder="Enter your email address..."
-                    >
-
-                    <button
-                        type="button"
-                        id="load-applications-button"
-                        class="primary-button"
-                    >
-                        Find Applications
-                    </button>
-
-                </div>
-
-                <p id="tracking-status"></p>
-
-            </div>
-
-            <div class="page-header">
-                <h2>Application History</h2>
-            </div>
-
-            <div
-                id="application-history-list"
-                class="project-grid"
-            >
-                <p>Enter your email address to view your applications.</p>
-            </div>
-
-        </section>
-
-
-        <!-- MANAGER DASHBOARD -->
-        <section id="manager-view" class="view hidden">
-
-            <div class="page-header">
-                <h1>Manager Dashboard</h1>
-                <p>Manage project opportunities and employee applications.</p>
-            </div>
-
-            <div class="stats-container">
-                <div class="stat-card">
-                    <h3 id="manager-open">0</h3>
-                    <p>Open Projects</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3 id="manager-closed">0</h3>
-                    <p>Closed Projects</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3 id="manager-total">0</h3>
-                    <p>Total Projects</p>
-                </div>
-            </div>
-
-            <div class="profile-card">
-                <h2>Upload Projects Using CSV</h2>
-
-                <input
-                    type="file"
-                    id="manager-csv-file"
-                    accept=".csv"
-                >
-
-                <button id="upload-csv-button" class="primary-button">
-                    Upload CSV
-                </button>
-
-                <p id="csv-upload-status"></p>
-            </div>
-
-            <div class="profile-card">
-                <h2>Published Projects</h2>
-                <div id="manager-project-list"></div>
-            </div>
-
-        </section>
-
-
-        <!-- PROJECT DETAILS MODAL -->
-        <div id="project-details-modal" class="modal hidden">
-
-            <div class="modal-content">
-
-                <button
-                    type="button"
-                    class="modal-close"
-                    id="close-details"
-                    aria-label="Close project details"
-                >
-                    &times;
-                </button>
-
-                <div id="project-details-content"></div>
-
-                <button
-                    type="button"
-                    id="details-apply-button"
-                    class="primary-button"
-                >
-                    Apply for This Project
-                </button>
-
-            </div>
-
         </div>
 
+        <form id="login-form" class="stacked-form hidden">
+            <h2 id="login-role-label"></h2>
+            <label>Work email <input id="login-email" type="email" required autocomplete="username"></label>
+            <label>Password <input id="login-password" type="password" required autocomplete="current-password"></label>
+            <p id="login-hint" class="hint"></p>
+            <button type="submit" class="primary-button">Sign in</button>
+            <button type="button" id="login-back" class="link-button">Back to options</button>
+        </form>
 
-        <!-- APPLICATION MODAL -->
-        <div id="application-modal" class="modal hidden">
+        <p id="login-status" class="status-text"></p>
+    </div>
+</div>
 
-            <div class="modal-content">
-
-                <button
-                    type="button"
-                    class="modal-close"
-                    id="close-application"
-                    aria-label="Close application form"
-                >
-                    &times;
-                </button>
-
-                <div class="page-header">
-                    <h1>Project Application</h1>
-                    <p id="application-project-title"></p>
-                </div>
-
-                <form id="application-form">
-
-                    <input
-                        type="hidden"
-                        id="application-project-id"
-                    >
-
-                    <label for="applicant-name">Full Name</label>
-
-                    <input
-                        type="text"
-                        id="applicant-name"
-                        required
-                    >
-
-                    <label for="applicant-email">Email Address</label>
-
-                    <input
-                        type="email"
-                        id="applicant-email"
-                        required
-                    >
-
-                    <label for="applicant-skills">Your Skills</label>
-
-                    <textarea
-                        id="applicant-skills"
-                        placeholder="SQL, Python, Excel..."
-                    ></textarea>
-
-                    <label for="application-cover-letter">
-                        Why are you interested in this project?
-                    </label>
-
-                    <textarea
-                        id="application-cover-letter"
-                        rows="5"
-                        placeholder="Tell the manager why you are interested..."
-                    ></textarea>
-
-                    <label for="application-resume">
-                        Resume (PDF or DOCX)
-                    </label>
-
-                    <input
-                        type="file"
-                        id="application-resume"
-                        accept=".pdf,.docx"
-                    >
-
-                    <p id="application-status"></p>
-
-                    <button
-                        type="submit"
-                        class="primary-button"
-                        id="submit-application"
-                    >
-                        Submit Application
-                    </button>
-
-                </form>
-
-            </div>
-
+<!-- ==========================================
+     APP SHELL (one shell; the router fills it with the right dashboard)
+     ========================================== -->
+<div id="app-shell" class="app-shell hidden">
+    <header class="topbar">
+        <div class="brand small">
+            <span class="brand-mark">N</span>
+            <strong>Net-Worker</strong>
         </div>
+        <nav id="dashboard-nav" class="dashboard-nav"></nav>
+        <div class="user-chip">
+            <span id="user-name"></span>
+            <span id="user-role" class="role-badge"></span>
+            <button type="button" id="logout-button" class="secondary-button">Sign out</button>
+        </div>
+    </header>
 
-    </main>
+    <main id="dashboard-root" class="dashboard-root"></main>
+</div>
 
+<!-- ==========================================
+     POP-UP (shared by both dashboards)
+     ========================================== -->
+<div id="modal" class="modal hidden">
+    <div class="modal-content">
+        <button type="button" id="modal-close" class="modal-close" aria-label="Close">&times;</button>
+        <div id="modal-body"></div>
+    </div>
 </div>
 
 </body>
