@@ -2,28 +2,26 @@
 import csv
 import io
 import re
-import sys
 import sqlite3
+from contextlib import asynccontextmanager
 
-from pathlib import Path
 from pydantic import BaseModel, EmailStr
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from backend.api.resume_routes import router as resume_router
 from backend.api.application_routes import router as application_router
-
-# ==========================================
-# PROJECTHUB DATABASE CONNECTION
-# ==========================================
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-sys.path.append(str(PROJECT_ROOT / "backend" / "database"))
-
-from database import get_connection, create_tables
+from backend.core.db import connect as get_connection, create_tables
 
 
-app = FastAPI(title="ProjectHub API")
+# Runs when this app is started on its own (uvicorn backend.api.main:app).
+# When deploy/server.py mounts it, deploy/server.py runs create_tables() instead.
+@asynccontextmanager
+async def lifespan(app):
+    create_tables()
+    yield
+
+
+app = FastAPI(title="ProjectHub API", lifespan=lifespan)
 app.include_router(resume_router, prefix="/resumes", tags=["Resumes"])
 app.include_router(application_router, prefix="/applications", tags=["Applications"])
 
@@ -34,11 +32,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-def startup():
-    create_tables()
 
 
 # ==========================================

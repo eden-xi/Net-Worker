@@ -3,8 +3,8 @@ Manager / admin routes, served under /mp/manager/.
 
 Only managers reach these: marketplace/server.py checks auth.MANAGER_ONLY before
 any of this code runs. Everything here reads and writes the SAME database tables the
-team's existing backend uses; the only new table is marketplace_listings, which
-remembers which manager posted a listing.
+team's existing backend uses. "Who posted this listing" is stored on the projects
+table itself (posted_by_email / posted_by_name, added by backend/core/db.py).
 """
 
 import re
@@ -15,9 +15,8 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-import backend.api.resume_routes as resume_routes
-from backend.api.application_routes import ensure_resume_text_column
-from backend.database.database import get_connection
+from backend.core import config
+from backend.core.db import connect as get_connection
 from marketplace.auth import get_session_user
 
 router = APIRouter()
@@ -27,19 +26,6 @@ LISTING_STATUSES = ["Open", "Closed", "Filled"]
 # Stored resume names are always 32 hex characters + .pdf/.docx (see resume_routes.py).
 # Checking the pattern means a database value can never point outside the resume folder.
 SAFE_RESUME_NAME = re.compile(r"^[0-9a-f]{32}\.(pdf|docx)$")
-
-
-def ensure_marketplace_table(connection):
-    """New side table: who posted each listing. The existing projects table is not changed."""
-    connection.execute("""
-        CREATE TABLE IF NOT EXISTS marketplace_listings (
-            project_id INTEGER PRIMARY KEY,
-            posted_by_email TEXT,
-            posted_by_name TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (project_id) REFERENCES projects(id)
-        )
-    """)
 
 
 # ------------------------------------------
@@ -52,14 +38,12 @@ def all_listings():
     connection = get_connection()
 
     try:
-        ensure_marketplace_table(connection)
         rows = connection.execute("""
             SELECT
                 projects.*,
-                marketplace_listings.posted_by_name AS posted_by,
+                projects.posted_by_name AS posted_by,
                 COUNT(applications.id) AS applicant_count
             FROM projects
-            LEFT JOIN marketplace_listings ON marketplace_listings.project_id = projects.id
             LEFT JOIN applications ON applications.project_id = projects.id
             GROUP BY projects.id
             ORDER BY projects.created_at DESC, projects.id DESC
@@ -93,26 +77,21 @@ def create_listing(listing: NewListing, request: Request):
     connection = get_connection()
 
     try:
-        ensure_marketplace_table(connection)
         cursor = connection.cursor()
 
         cursor.execute("""
             INSERT INTO projects (
                 role_id, title, client_project, required_skills, nice_to_have_skills,
-                seniority, location, start_date, status, description
+                seniority, location, start_date, status, description,
+                posted_by_email, posted_by_name
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Open', ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Open', ?, ?, ?)
         """, (
             role_id, title, listing.client_project.strip(), listing.required_skills.strip(),
             listing.nice_to_have_skills.strip(), listing.seniority.strip(), listing.location.strip(),
-            listing.start_date.strip(), listing.description.strip(),
+            listing.start_date.strip(), listing.description.strip(), manager["email"], manager["name"],
         ))
         project_id = cursor.lastrowid
-
-        cursor.execute(
-            "INSERT INTO marketplace_listings (project_id, posted_by_email, posted_by_name) VALUES (?, ?, ?)",
-            (project_id, manager["email"], manager["name"]),
-        )
         connection.commit()
 
         return {"message": "Listing published.", "project_id": project_id, "role_id": role_id}
@@ -152,7 +131,6 @@ def change_listing_status(project_id: int, update: ListingStatus):
 # ------------------------------------------
 
 def find_application(connection, application_id):
-    ensure_resume_text_column(connection)
     row = connection.execute("""
         SELECT
             applications.id AS application_id,
@@ -216,8 +194,7 @@ def application_attachment(application_id: int):
     if not SAFE_RESUME_NAME.match(filename):
         raise HTTPException(status_code=404, detail="No attachment for this application.")
 
-    # Read the folder at request time: deploy/server.py moves it into DATA_DIR at startup.
-    path = resume_routes.RESUME_FOLDER / filename
+    path = config.RESUME_DIR / filename
 
     if not path.exists():
         raise HTTPException(status_code=404, detail="The attachment file is missing (data resets on restart).")

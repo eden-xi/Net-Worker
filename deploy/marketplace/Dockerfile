@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir -r deploy/requirements.txt
 # Code only, file by file. The real database (backend/database/*.db) and
 # resumes (uploads/) are never copied, so they can't end up in the image.
 COPY backend/api/*.py backend/api/
-COPY backend/database/database.py backend/database/
+COPY backend/core/*.py backend/core/
 COPY frontend/ frontend/
 COPY deploy/*.py deploy/*.csv deploy/
 COPY marketplace/*.py marketplace/

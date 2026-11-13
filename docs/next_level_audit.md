@@ -353,8 +353,8 @@ Browser --(cookie)--> FastAPI routes ----------------------+
 
 | # | Move | Fixes | Size | Needs sign-off |
 |---|---|---|---|---|
-| 1 | **Foundation:** `core/config.py` + `core/db.py` (`get_db` dependency), one import path, lifespan startup | B1, B2, B3, B13, D1 | S | Yes (edits `backend/`) |
-| 2 | **Schemas + services:** Pydantic in/out models, status enums, SQL moved into `services/`, routes made thin, one apply endpoint | B4-B11, readiness 1 & 3 | M | Yes |
+| 1 | **Foundation:** `core/config.py` + `core/db.py` (`get_db` dependency), one import path, lifespan startup, schema upgrades at startup | B1, B2, B8, B13, D1 | S | Yes (edits `backend/`) |
+| 2 | **Schemas + services:** Pydantic in/out models, status enums, SQL moved into `services/`, routes made thin on get_db, one apply endpoint | B3-B7, B9-B11, readiness 1 & 3 | M | Yes |
 | 3 | **Identity as dependencies:** `current_user` / `require_manager`; apply uses the session email (closes the spoofing gap); restrict CORS | Security gap, B12, D2, readiness 2 | S | Yes |
 | 4 | **Data that survives + events table:** persistent disk or Postgres; `application_events` | Demo blocker, readiness 4 & 5, enables 3.2 / 3.3 | S-M | Yes (cost or infra) |
 | 5 | **UI pass + headline features:** tokens/light theme, badges, skeletons, toasts, 3-pane review, then skill-match score and status tracker | Section 2, 3.1, 3.2 | M-L | No (marketplace UI is ours) |

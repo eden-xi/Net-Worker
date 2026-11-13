@@ -7,14 +7,12 @@ from uuid import uuid4
 import fitz
 from docx import Document
 
+from backend.core import config
+
 
 router = APIRouter()
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-RESUME_FOLDER = PROJECT_ROOT / "uploads" / "resumes"
-RESUME_FOLDER.mkdir(parents=True, exist_ok=True)
-
-MAX_FILE_SIZE = 5 * 1024 * 1024
+MAX_FILE_SIZE = config.MAX_RESUME_BYTES
 
 
 def extract_pdf_text(file_contents):
@@ -100,7 +98,7 @@ async def upload_resume(file: UploadFile = File(...)):
         )
 
     stored_filename = f"{uuid4().hex}{extension}"
-    save_path = RESUME_FOLDER / stored_filename
+    save_path = config.RESUME_DIR / stored_filename
     save_path.write_bytes(file_contents)
 
     return {

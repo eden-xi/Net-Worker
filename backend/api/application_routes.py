@@ -6,29 +6,15 @@ from uuid import uuid4
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 
 from backend.api.resume_routes import (
-    RESUME_FOLDER,
     extract_pdf_text,
     extract_docx_text
 )
 
-from backend.database.database import get_connection
+from backend.core import config
+from backend.core.db import connect as get_connection
 
 
 router = APIRouter()
-
-
-def ensure_resume_text_column(connection):
-    columns = [
-        row["name"]
-        for row in connection.execute(
-            "PRAGMA table_info(employees)"
-        ).fetchall()
-    ]
-
-    if "resume_text" not in columns:
-        connection.execute(
-            "ALTER TABLE employees ADD COLUMN resume_text TEXT DEFAULT ''"
-        )
 
 
 @router.post("/submit-with-resume")
@@ -53,7 +39,6 @@ async def submit_application_with_resume(
     saved_path = None
 
     try:
-        ensure_resume_text_column(connection)
         cursor = connection.cursor()
 
         cursor.execute("""
@@ -101,7 +86,7 @@ async def submit_application_with_resume(
                     detail="Only PDF and DOCX resumes are accepted."
                 )
 
-            file_contents = await resume.read(5 * 1024 * 1024 + 1)
+            file_contents = await resume.read(config.MAX_RESUME_BYTES + 1)
 
             if not file_contents:
                 raise HTTPException(
@@ -109,7 +94,7 @@ async def submit_application_with_resume(
                     detail="The uploaded resume is empty."
                 )
 
-            if len(file_contents) > 5 * 1024 * 1024:
+            if len(file_contents) > config.MAX_RESUME_BYTES:
                 raise HTTPException(
                     status_code=413,
                     detail="Resume must be 5 MB or smaller."
@@ -134,7 +119,7 @@ async def submit_application_with_resume(
                 resume_text = extract_docx_text(file_contents)
 
             resume_filename = f"{uuid4().hex}{extension}"
-            saved_path = RESUME_FOLDER / resume_filename
+            saved_path = config.RESUME_DIR / resume_filename
             saved_path.write_bytes(file_contents)
 
         if employee:
