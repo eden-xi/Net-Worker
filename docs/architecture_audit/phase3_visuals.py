@@ -262,6 +262,16 @@ FLOWS = {
         ("schemas ApplicationStatusOut", "the response shape"),
         ("Browser", "200: the new status\nshows on screen"),
     ]),
+    "agent": ("Planned: one assistant turn, layer by layer (NOT built)", [
+        ("Browser", "Morgan types: 'Rank the\napplicants for Backend\nEngineer'"),
+        ("agent route", "Depends(require_manager):\nthe agent acts AS Morgan"),
+        ("agent.py loop", "question + the tools\nMorgan's role may use\n(policy.py)"),
+        ("LLM", "picks a tool:\nrank_applicants(1)"),
+        ("tools.py", "calls services.applications\n.list_for_project(db, 1)\n- same code as the REST API"),
+        ("LLM", "writes the answer; may\nPROPOSE 'Accept Erin'\n(it cannot write itself)"),
+        ("Browser", "shows a Confirm card;\nMorgan clicks it -> the\nnormal PATCH endpoint"),
+        ("activity_events", "'Morgan Manager (via\nassistant) moved Erin\n... to Accepted'"),
+    ]),
 }
 
 
@@ -375,11 +385,11 @@ def agent_plan():
     ax.set_xlim(0, 13)
     ax.set_ylim(0, 7)
     ax.axis("off")
-    box(ax, 0.2, 5.3, 3.0, 1.2, "Browser", "frontend/js/views/assistant.js\n(chat panel, confirm buttons)")
-    box(ax, 4.2, 5.3, 4.2, 1.2, "routes/agent.py  (/api/agent/chat)", "Depends(current_user): the agent\nalways acts AS the signed-in person")
+    box(ax, 0.2, 5.3, 3.0, 1.2, "Browser", "frontend/js/assistant/panel.js\n(chat panel, Confirm cards)")
+    box(ax, 4.2, 5.3, 4.2, 1.2, "agent/routes.py  (/api/agent/chat)", "Depends(current_user): the agent\nalways acts AS the signed-in person")
     box(ax, 4.2, 3.1, 4.2, 1.5, "backend/agent/", "agent.py   - tool loop (LLM call -> tool -> repeat)\nprompts.py - instructions + guardrails\npolicy.py  - which tools each role may use",
         fill=HIGHLIGHT, edge=PURPLE, title_color=PURPLE)
-    box(ax, 9.3, 3.1, 3.5, 1.5, "backend/mcp/server.py", "MCP tools = thin wrappers\nover services (read first,\nwrite tools need confirm)",
+    box(ax, 9.3, 3.1, 3.5, 1.5, "backend/mcp/", "tools.py  - the tool list:\n  thin wrappers over services\nserver.py - MCP door for\n  outside AI clients",
         fill=HIGHLIGHT, edge=PURPLE, title_color=PURPLE)
     box(ax, 4.2, 0.7, 4.2, 1.5, "backend/services/ + matching/", "the SAME functions the REST routes use\n(projects, applications, activity, skill_match)")
     box(ax, 9.3, 0.7, 3.5, 1.5, "activity_events", "every agent action logged with\nactor = 'agent for <person>'")
@@ -391,8 +401,8 @@ def agent_plan():
     arrow(ax, 11.0, 3.1, 8.4, 1.5)
     arrow(ax, 8.4, 1.45, 9.3, 1.45)
     ax.plot([3.75, 3.75], [0.4, 6.8], color=BAD, linestyle=":", linewidth=1.2)
-    ax.text(3.82, 6.75, "trust boundary: model output is a suggestion,\nservices + policy decide what actually happens",
-            fontsize=7.8, color=BAD, va="top")
+    ax.text(0.2, 2.2, "trust boundary (dotted line):\nthe model only SUGGESTS;\nservices + policy decide\nwhat actually happens",
+            fontsize=8, color=BAD, va="top")
     ax.set_title("Planned: agent + MCP server (not built yet)", loc="left", fontsize=13, color=INK, fontweight="bold")
     save(fig, "agent_plan.png")
 
@@ -420,6 +430,7 @@ def main(target):
         trend_chart()
     if target in ("agent", "all"):
         agent_plan()
+        flow_diagram("agent_flow.png", *FLOWS["agent"])
 
 
 if __name__ == "__main__":

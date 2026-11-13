@@ -68,7 +68,7 @@ class Walkthrough(FPDF):
         cells = [[inline(c.strip())[0].replace("**", "") for c in r.strip().strip("|").split("|")] for r in rows]
         cells = [r for r in cells if not all(set(c) <= set("-: ") for c in r)]    # drop the |---| line
         widest = [min(max(len(r[i]) for r in cells) + 4, 70) for i in range(len(cells[0]))]
-        widest = [max(width, 9) for width in widest]                       # no column too thin to print
+        widest = [max(width, 16) for width in widest]                       # no column too thin to print
         widths = [w / sum(widest) * self.epw for w in widest]
         self.set_font("Helvetica", "", 8.5)
         with self.table(col_widths=widths, text_align="LEFT", line_height=4.6, padding=1.4,
