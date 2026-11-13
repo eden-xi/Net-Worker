@@ -97,10 +97,10 @@ def test_database_module_loaded_once():
 def test_resume_upload_lands_in_data_dir(client):
     from tests.conftest import login, make_pdf
 
-    user = login(client, "employee")
+    login(client, "employee")
     project_id = client.get("/api/projects").json()[0]["id"]
     response = client.post("/api/applications", data={
-        "project_id": project_id, "name": user["name"], "email": user["email"],
+        "project_id": project_id,
     }, files={"resume": ("cv.pdf", make_pdf(), "application/pdf")})
 
     assert response.status_code == 201, response.text

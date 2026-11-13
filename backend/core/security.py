@@ -8,14 +8,19 @@ How a login works:
      it in an HttpOnly cookie (page JavaScript can't read it).
   4. Every later request carries the cookie; get_session_user() turns it back into a User.
 
+Who may do what is decided by three FastAPI dependencies (section 3), written on the
+routes themselves. A route that needs a manager SAYS so:  Depends(require_manager).
+
 check_credentials() is the ONE function to replace for real company logins (SSO).
 """
 
-import re
 import secrets
 import time
 
+from fastapi import Depends, Request
+
 from backend.core import config
+from backend.core.errors import Forbidden, NotSignedIn
 from backend.schemas.users import Role, User
 
 # ------------------------------------------
@@ -81,41 +86,31 @@ def get_session_user(request):
 
 
 # ------------------------------------------
-# 3. Who may call what: a rule table checked by deploy/server.py on every request
-#    (Move 3 replaces this with FastAPI dependencies on each route.)
+# 3. Who may call what: FastAPI dependencies
+#
+#    def my_route(user: User = Depends(current_user))      any signed-in person
+#    def my_route(user: User = Depends(require_manager))   managers only
+#    def my_route(user: User = Depends(require_employee))  employees only
+#
+#    FastAPI runs the dependency BEFORE the route. If it raises, the route never runs.
+#    backend/app.py also puts current_user on whole routers, so a new route is
+#    protected even if its author forgets (default deny).
 # ------------------------------------------
 
-# Paths anyone may call without signing in (otherwise nobody could see the login wall).
-PUBLIC_API_PATHS = ["/api/auth/", "/api/health"]
-
-# (HTTP method, path pattern) pairs only a manager may call.
-MANAGER_ONLY = [
-    ("GET", r"^/api/projects/manage$"),
-    ("POST", r"^/api/projects$"),
-    ("POST", r"^/api/projects/upload-csv$"),
-    ("PATCH", r"^/api/projects/\d+/status$"),
-    ("GET", r"^/api/projects/\d+/applications$"),
-    ("GET", r"^/api/applications/\d+/(document|attachment)$"),
-    ("PATCH", r"^/api/applications/\d+/status$"),
-]
-
-
-def access_problem(method, path, query_email, user):
-    """Return (status_code, message) if the request must be refused, or None if it may continue."""
-    if not path.startswith("/api/") or any(path.startswith(public) for public in PUBLIC_API_PATHS):
-        return None
-
+def current_user(request: Request) -> User:
+    user = get_session_user(request)
     if user is None:
-        return 401, "Please log in first."
+        raise NotSignedIn("Please log in first.")
+    return user
 
-    for rule_method, pattern in MANAGER_ONLY:
-        if rule_method == method and re.match(pattern, path):
-            if user.role != Role.MANAGER:
-                return 403, "This area is for project managers only."
 
-    # Employees may only look up their OWN applications.
-    if path == "/api/applications/mine" and user.role == Role.EMPLOYEE:
-        if (query_email or "").strip().lower() != user.email:
-            return 403, "You can only view your own applications."
+def require_manager(user: User = Depends(current_user)) -> User:
+    if user.role != Role.MANAGER:
+        raise Forbidden("This area is for project managers only.")
+    return user
 
-    return None
+
+def require_employee(user: User = Depends(current_user)) -> User:
+    if user.role != Role.EMPLOYEE:
+        raise Forbidden("Only employees can do this.")
+    return user

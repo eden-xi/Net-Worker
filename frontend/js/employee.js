@@ -52,8 +52,7 @@ function showApplyForm(project, user) {
     openModal(`
         <h2>Apply: ${escapeHTML(project.title)}</h2>
         <form id="apply-form" class="stacked-form">
-            <label>Full name <input name="name" required value="${escapeHTML(user.name)}"></label>
-            <label>Email (from your login) <input name="email" readonly value="${escapeHTML(user.email)}"></label>
+            <p class="muted">Applying as <strong>${escapeHTML(user.name)}</strong> (${escapeHTML(user.email)}), from your sign-in.</p>
             <label>Your skills <textarea name="skills" rows="2" placeholder="Python, SQL, Azure..."></textarea></label>
             <label>Why this project? <textarea name="cover_letter" rows="4"></textarea></label>
             <label>Resume (PDF or DOCX, max 5 MB) <input name="resume" type="file" accept=".pdf,.docx"></label>
@@ -104,9 +103,7 @@ async function showMyApplications(root, user) {
     const box = document.getElementById("my-applications");
 
     try {
-        const applications = await apiFetch(
-            `/api/applications/mine?email=${encodeURIComponent(user.email)}`
-        );
+        const applications = await apiFetch("/api/applications/mine");     // the server knows who you are
 
         if (applications.length === 0) {
             box.innerHTML = `<p class="muted">No applications yet. Head to "Browse projects" to find one.</p>`;

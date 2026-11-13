@@ -1,0 +1,69 @@
+{
+  "move": "move3",
+  "concurrency": 25,
+  "scenarios": [
+    {
+      "name": "sign in (distinct employees)",
+      "requests": 150,
+      "errors": 0,
+      "p50_ms": 68.2,
+      "p95_ms": 75.6,
+      "max_ms": 96.5,
+      "per_second": 306.9
+    },
+    {
+      "name": "browse open listings",
+      "requests": 400,
+      "errors": 0,
+      "p50_ms": 46.6,
+      "p95_ms": 62.2,
+      "max_ms": 84.4,
+      "per_second": 473.4
+    },
+    {
+      "name": "open one listing",
+      "requests": 400,
+      "errors": 0,
+      "p50_ms": 44.4,
+      "p95_ms": 58.4,
+      "max_ms": 80.9,
+      "per_second": 490.7
+    },
+    {
+      "name": "apply with PDF (writes)",
+      "requests": 150,
+      "errors": 0,
+      "p50_ms": 89.1,
+      "p95_ms": 137.6,
+      "max_ms": 180.6,
+      "per_second": 246.1
+    },
+    {
+      "name": "no sign-in -> must be 401",
+      "requests": 300,
+      "errors": 0,
+      "p50_ms": 64.8,
+      "p95_ms": 253.8,
+      "max_ms": 566.1,
+      "per_second": 242.4
+    },
+    {
+      "name": "employee -> manager route -> must be 403",
+      "requests": 300,
+      "errors": 0,
+      "p50_ms": 38.2,
+      "p95_ms": 43.8,
+      "max_ms": 54.4,
+      "per_second": 560.6
+    },
+    {
+      "name": "manager: all listings + counts",
+      "requests": 200,
+      "errors": 0,
+      "p50_ms": 91.9,
+      "p95_ms": 267.9,
+      "max_ms": 531.6,
+      "per_second": 206.2
+    }
+  ]
+}

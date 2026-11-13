@@ -260,7 +260,7 @@ FLOWS = {
         ("routes/applications.py", "change_status(): body\nvalidated by the schema"),
         ("services/applications.py", "set_status(): UPDATE in\na transaction"),
         ("schemas ApplicationStatusOut", "the response shape"),
-        ("Browser", "200: badge turns green"),
+        ("Browser", "200: the new status\nshows on screen"),
     ]),
 }
 

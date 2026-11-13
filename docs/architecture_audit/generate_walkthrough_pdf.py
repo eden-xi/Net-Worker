@@ -81,7 +81,7 @@ class Walkthrough(FPDF):
 
     def code_block(self, lines):
         self.set_font("Courier", "", 8.5); self.set_fill_color(242, 242, 246)
-        self.multi_cell(0, 4.6, clean("\n".join(lines)), fill=True, new_x="LMARGIN", new_y="NEXT")
+        self.multi_cell(0, 4.6, clean("\n".join(lines)), fill=True, align="L", new_x="LMARGIN", new_y="NEXT")
         self.ln(2)
 
     def picture(self, path):

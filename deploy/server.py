@@ -3,8 +3,10 @@ Net-Worker server: the one process that runs on Render.
 
   1. Serves the frontend (frontend/) and the API (backend/app.py, at /api) from one address.
   2. Asks for a shared team password on every page (the browser pop-up).
-  3. Checks the login + role rules on every /api request.
-  4. On startup: builds the database tables and loads demo projects if it is empty.
+  3. On startup: builds the database tables and loads demo projects if it is empty.
+
+Who may call which API route is NOT decided here: each route declares it with
+Depends(current_user / require_manager / require_employee). See backend/core/security.py.
 
 All settings (data folder, passwords, login mode) come from backend/core/config.py.
 
@@ -16,11 +18,12 @@ import secrets
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.app import api
-from backend.core import config, security
+from backend.core import config
 from backend.core.db import connect, create_tables
 from backend.services import projects
 
@@ -53,20 +56,14 @@ async def lifespan(app):
 app = FastAPI(title="Net-Worker", lifespan=lifespan)
 
 # ------------------------------------------
-# 2. Middleware. The one added LAST runs FIRST, so on each request:
-#      team password  ->  login + role rules  ->  the route
+# 2. Middleware: the team password, and (only if configured) other sites allowed to call us
 # ------------------------------------------
 
-@app.middleware("http")
-async def require_login(request: Request, call_next):
-    user = security.get_session_user(request)
-    problem = security.access_problem(request.method, request.url.path, request.query_params.get("email"), user)
-
-    if problem:
-        status_code, message = problem
-        return JSONResponse({"detail": message}, status_code=status_code)
-
-    return await call_next(request)
+# The page and the API share one address, so browsers need no CORS permission at all.
+# Only list extra sites in ALLOWED_ORIGINS if one really needs to call the API.
+if config.ALLOWED_ORIGINS:
+    app.add_middleware(CORSMiddleware, allow_origins=config.ALLOWED_ORIGINS, allow_credentials=True,
+                       allow_methods=["GET", "POST", "PATCH"], allow_headers=["Content-Type"])
 
 
 def team_password_is_correct(auth_header):

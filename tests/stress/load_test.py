@@ -108,8 +108,9 @@ def summary(name, latencies, errors, seconds):
     }
 
 
-async def run(name, total, concurrency, send):
-    """Call send(i) `total` times, `concurrency` at once. send returns an httpx response."""
+async def run(name, total, concurrency, send, expect=None):
+    """Call send(i) `total` times, `concurrency` at once. send returns an httpx response.
+    expect: the status code that counts as correct (default: anything below 400)."""
     gate = asyncio.Semaphore(concurrency)
     latencies, failures = [], []
 
@@ -118,7 +119,8 @@ async def run(name, total, concurrency, send):
             started = time.perf_counter()
             try:
                 response = await send(i)
-                if response.status_code >= 400:
+                wrong = response.status_code != expect if expect else response.status_code >= 400
+                if wrong:
                     failures.append(f"{response.status_code}: {response.text[:80]}")
             except httpx.HTTPError as error:
                 failures.append(repr(error))
@@ -159,14 +161,19 @@ async def scenarios(base, employees_count, concurrency):
                              lambda i: employees[i % len(employees)].get(f"/api/projects/{projects[i % len(projects)]['id']}")))
 
     async def apply(i):
-        client = employees[i]
-        email = f"stress{i}@load.test"
-        return await client.post("/api/applications", data={
-            "project_id": projects[i % len(projects)]["id"], "name": f"Stress {i}", "email": email,
-            "skills": "Python, SQL", "cover_letter": "Load test",
+        return await employees[i].post("/api/applications", data={
+            "project_id": projects[i % len(projects)]["id"], "skills": "Python, SQL", "cover_letter": "Load test",
         }, files={"resume": ("cv.pdf", pdf, "application/pdf")})
 
     results.append(await run("apply with PDF (writes)", employees_count, concurrency, apply))
+
+    # Security under load: the refusals must hold every single time.
+    stranger = httpx.AsyncClient(base_url=base, auth=TEAM_PASSWORD, timeout=30)
+    results.append(await run("no sign-in -> must be 401", 300, concurrency,
+                             lambda i: stranger.get("/api/projects"), expect=401))
+    results.append(await run("employee -> manager route -> must be 403", 300, concurrency,
+                             lambda i: employees[i % len(employees)].get(MANAGER_LISTINGS), expect=403))
+    await stranger.aclose()
     results.append(await run("manager: all listings + counts", 200, concurrency,
                              lambda i: manager.get(MANAGER_LISTINGS)))
 

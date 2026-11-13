@@ -6,6 +6,7 @@ services don't know about HTTP: the same function is used by routes, tests, and
 later the MCP server. backend/app.py turns each one into a response, once:
 
     NotFound  -> 404      Conflict -> 409      Invalid -> 400      TooLarge -> 413
+    NotSignedIn -> 401    Forbidden -> 403   (raised by core/security.py)
 """
 
 
@@ -31,3 +32,11 @@ class Invalid(AppError):
 
 class TooLarge(AppError):
     status_code = 413
+
+
+class NotSignedIn(AppError):
+    status_code = 401
+
+
+class Forbidden(AppError):
+    status_code = 403

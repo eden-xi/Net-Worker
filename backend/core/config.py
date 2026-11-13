@@ -46,6 +46,10 @@ SESSION_HOURS = 8
 COOKIE_NAME = "mp_session"
 COOKIE_SECURE = os.getenv("COOKIE_SECURE") == "1"          # set to 1 on HTTPS hosts like Render
 
+# Other websites allowed to call the API from a browser (comma-separated). Empty = none,
+# which is right while the page and the API live on the same address.
+ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", "").split(",") if origin.strip()]
+
 # ------------------------------------------
 # Demo data
 # ------------------------------------------
