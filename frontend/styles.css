@@ -8,17 +8,17 @@
     --accent: #A100FF;
     --accent-light: #BD5CFF;
     --accent-dark: #7900CC;
-    --bg-main: #FFFFFF;
-    --bg-sidebar: #F5F5F5;
-    --bg-card: #FFFFFF;
-    --bg-card-hover: #F5F5F5;
-    --border: rgba(0, 0, 0, 0.12);
-    --text-main: #000000;
-    --text-muted: #525252;
-    --success: #0A8F63;
-    --danger: #D6264A;
-    --radius: 8px;
-    --glow: 0 0 0 3px rgba(161, 0, 255, 0.15);
+    --bg-main: #090812;
+    --bg-sidebar: #0D0B18;
+    --bg-card: #151222;
+    --bg-card-hover: #1C1730;
+    --border: rgba(255, 255, 255, 0.09);
+    --text-main: #F5F2FA;
+    --text-muted: #A49BB5;
+    --success: #35D6A0;
+    --danger: #FF5577;
+    --radius: 16px;
+    --glow: 0 0 25px rgba(161, 0, 255, 0.22);
 }
 
 * {
