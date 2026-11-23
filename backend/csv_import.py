@@ -20,6 +20,9 @@ COLUMN_ALIASES = {
     "location": ["location", "work location", "job location", "work arrangement", "work type"],
     "start_date": ["start_date", "start date", "beginning date", "project start", "start"],
     "status": ["status", "project status", "role status", "availability"],
+    "openings": [
+        "openings", "open roles", "positions", "headcount", "number of openings", "seats",
+    ],
     "description": [
         "description", "job description", "project description", "role description",
         "details", "summary",

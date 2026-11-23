@@ -11,6 +11,7 @@ OPEN_PROJECTS_SQL = """
     SELECT projects.id, projects.role_id, projects.title, projects.client_project,
         projects.required_skills, projects.nice_to_have_skills, projects.seniority,
         projects.location, projects.start_date, projects.status, projects.description,
+        projects.openings,
         projects.created_at,
         EXISTS (SELECT 1 FROM applications
                 WHERE applications.project_id = projects.id

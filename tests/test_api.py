@@ -1,6 +1,6 @@
 """Employee flows, sign-in, headers, and CSV import."""
 
-from conftest import docx_upload, sign_in
+from conftest import docx_upload
 
 ALEX = "alex@example.com"          # seeded employee
 PRIYA = "priya.pm@example.com"     # seeded PM who owns the sample roles

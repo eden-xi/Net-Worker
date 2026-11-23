@@ -4,8 +4,9 @@ import { request, get, postForm, sendJSON } from "../api.js";
 import { avatarHTML } from "../avatars.js";
 import { icon } from "../icons.js";
 import {
-    $, chips, closeDrawer, emptyState, escapeHTML, fillSelect, formatDate, matchBlock, matchPill,
-    monogram, openDrawer, setMessage, skeletons, splitSkills, statusPill, toast,
+    $, chips, closeDrawer, confirmClick, EMPLOYEE_STATUS_LABELS, emptyState, escapeHTML, fillSelect,
+    formatDate, matchBlock, matchPill, monogram, openDrawer, setMessage, skeletons, splitSkills,
+    statusPill, toast,
 } from "../ui.js";
 
 let state = null;
@@ -37,6 +38,22 @@ export function initEmployeeViews(appState) {
     });
 
     setupProfile();
+
+    $("#application-list").addEventListener("click", event => {
+        const button = event.target.closest("[data-withdraw]");
+        if (!button) return;
+
+        confirmClick(button, "Confirm withdraw", async () => {
+            try {
+                await request(`/me/applications/${button.dataset.withdraw}`, { method: "DELETE" });
+                toast("Application withdrawn. You can apply again any time while the project is open.");
+                openProjects = [];
+                renderApplications();
+            } catch (error) {
+                toast(error.message, "error");
+            }
+        });
+    });
 }
 
 function firstName() {
@@ -143,7 +160,7 @@ function projectCard(project, { showMatch = true } = {}) {
             <div class="project-head">
                 ${monogram(project.client_project || project.title)}
                 <div>
-                    <h3>${escapeHTML(project.title)}</h3>
+                    <h2>${escapeHTML(project.title)}</h2>
                     <p>${escapeHTML(project.client_project || "Internal project")}</p>
                 </div>
                 ${project.applied ? `<span class="pill success">${icon("check")}Applied</span>` : ""}
@@ -264,7 +281,7 @@ function showProject(project) {
             <div><dt>Location</dt><dd>${escapeHTML(project.location || "To be decided")}</dd></div>
             <div><dt>Seniority</dt><dd>${escapeHTML(project.seniority || "Any level")}</dd></div>
             <div><dt>Starts</dt><dd>${escapeHTML(formatDate(project.start_date) || "To be decided")}</dd></div>
-            <div><dt>Status</dt><dd>${escapeHTML(project.status || "Open")}</dd></div>
+            <div><dt>Openings</dt><dd>${Number(project.openings) || 1}</dd></div>
         </dl>
 
         ${match ? `<section><h3>How you match</h3>${matchBlock(match)}</section>` : `
@@ -387,16 +404,16 @@ export async function renderRecommended() {
 // ==========================================
 
 function timeline(status) {
-    const value = String(status || "Submitted").toLowerCase();
-    const reviewing = value === "under review";
+    const value = String(status || "New").toLowerCase();
+    const reviewing = value === "shortlisted";
     const decided = value === "accepted" || value === "rejected";
 
     const step = (label, classes) => `<div class="step ${classes}">${escapeHTML(label)}</div>`;
 
     return `
-        <div class="timeline" aria-label="Status: ${escapeHTML(status)}">
-            ${step("Submitted", `done ${value === "submitted" ? "current" : ""}`)}
-            ${step("Under review", reviewing || decided ? `done ${reviewing ? "current" : ""}` : "")}
+        <div class="timeline" aria-label="Status: ${escapeHTML(EMPLOYEE_STATUS_LABELS[status] || status)}">
+            ${step("Submitted", `done ${value === "new" ? "current" : ""}`)}
+            ${step("In review", reviewing || decided ? `done ${reviewing ? "current" : ""}` : "")}
             ${value === "accepted" ? step("Accepted", "accepted")
                 : value === "rejected" ? step("Not selected", "rejected")
                 : step("Decision", "")}
@@ -417,7 +434,7 @@ export async function renderApplications() {
                     <div class="project-head">
                         ${monogram(application.client_project || application.project_title)}
                         <div>
-                            <h3>${escapeHTML(application.project_title)}</h3>
+                            <h2>${escapeHTML(application.project_title)}</h2>
                             <p>${escapeHTML(application.client_project || "")}
                                 ${application.location ? ` &middot; ${escapeHTML(application.location)}` : ""}</p>
                             <p class="small">Applied ${escapeHTML(formatDate(application.submitted_at))}
@@ -425,7 +442,12 @@ export async function renderApplications() {
                         </div>
                     </div>
                     <div>
-                        <p>${statusPill(application.status)}</p>
+                        <div class="application-status">
+                            ${statusPill(application.status, EMPLOYEE_STATUS_LABELS[application.status])}
+                            ${["New", "Shortlisted"].includes(application.status) ? `
+                                <button type="button" class="button ghost small"
+                                    data-withdraw="${Number(application.application_id)}">Withdraw</button>` : ""}
+                        </div>
                         ${timeline(application.status)}
                     </div>
                 </article>`).join("")

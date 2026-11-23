@@ -34,6 +34,16 @@ def profile_response(connection, user):
         "avatar": avatar_version(row["avatar_filename"]),
         "years_of_experience": candidate.years,
         "managed_projects": managed_project_count(connection, user),
+        "new_applicants": connection.execute(
+            """
+            SELECT COUNT(*) FROM applications
+            JOIN project_managers
+                ON project_managers.project_id = applications.project_id
+                AND project_managers.user_id = ?
+            WHERE applications.application_status = 'New'
+            """,
+            (user.id,),
+        ).fetchone()[0],
         "can_become_pm": config.pm_self_service() and not user.has_role("pm"),
     }
 
@@ -191,6 +201,31 @@ def my_applications(user=Depends(get_current_user), connection=Depends(get_db)):
     ).fetchall()
 
     return [dict(row) for row in rows]
+
+
+@router.delete("/applications/{application_id}")
+def withdraw_application(
+    application_id: int, user=Depends(get_current_user), connection=Depends(get_db),
+):
+    """Withdraw one of your own applications before a decision is made.
+    You can apply again later."""
+    row = connection.execute(
+        "SELECT * FROM applications WHERE id = ? AND user_id = ?", (application_id, user.id)
+    ).fetchone()
+
+    if row is None:
+        raise HTTPException(404, "Application not found.")
+
+    if row["application_status"] in ("Accepted", "Rejected"):
+        raise HTTPException(409, "A decision has already been made on this application.")
+
+    connection.execute(
+        "DELETE FROM matches WHERE user_id = ? AND project_id = ?", (user.id, row["project_id"])
+    )
+    connection.execute("DELETE FROM applications WHERE id = ?", (application_id,))
+    connection.commit()
+
+    return {"withdrawn": application_id}
 
 
 @router.post("/become-pm")

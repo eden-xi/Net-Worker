@@ -1,7 +1,10 @@
 // API client. Every request carries the token from the active sign-in
 // provider (see auth.js); business code never deals with tokens.
 
-const API_BASE = window.location.protocol.startsWith("http") && window.location.port === "8000"
+// The API lives on the server that served this page. The exceptions are
+// pages opened from disk (file://) and VS Code Live Server (port 5500),
+// which reach a locally running API instead.
+const API_BASE = window.location.protocol.startsWith("http") && window.location.port !== "5500"
     ? ""
     : "http://127.0.0.1:8000";
 

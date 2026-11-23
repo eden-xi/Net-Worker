@@ -4,7 +4,6 @@ database from before sign-in existed."""
 import sqlite3
 import time
 
-import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 

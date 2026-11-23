@@ -116,6 +116,11 @@ function updateNav() {
     $("#nav-admin").classList.toggle("hidden", !showAdmin);
     $("#nav-manage-label").classList.toggle("hidden", !(showPm || showPost || showAdmin));
 
+    const fresh = Number(me?.new_applicants) || 0;
+    $("#nav-pm-badge").textContent = fresh > 99 ? "99+" : String(fresh);
+    $("#nav-pm-badge").classList.toggle("hidden", !fresh);
+    $("#nav-pm-badge").setAttribute("aria-label", `${fresh} new applicant${fresh === 1 ? "" : "s"}`);
+
     for (const route of ["recommended", "applications", "profile"]) {
         document.querySelector(`[data-route="${route}"]`).classList.toggle("hidden", state.demo);
     }
@@ -132,8 +137,8 @@ function updateNav() {
 }
 
 function currentRoute() {
-    const name = window.location.hash.replace(/^#\/?/, "").split(/[?/]/)[0];
-    return ROUTES[name] ? name : "browse";
+    const [name, ...params] = window.location.hash.replace(/^#\/?/, "").split("/");
+    return ROUTES[name] ? { name, params } : { name: "browse", params: [] };
 }
 
 async function showRoute() {
@@ -144,18 +149,19 @@ async function showRoute() {
         return;
     }
 
-    let name = currentRoute();
+    let { name, params } = currentRoute();
     const route = ROUTES[name];
 
     if ((route.needsApi && state.demo) || (route.allowed && !route.allowed())) {
         name = "browse";
+        params = [];
         if (window.location.hash !== "#/browse") {
             window.location.hash = "#/browse";
             return;
         }
     }
 
-    showView(name);
+    showView(name === "pm" && params[0] === "project" ? "pm-project" : name);
     document.title = `${ROUTES[name].title} | ProjectHub`;
 
     document.querySelectorAll("[data-route]").forEach(link => {
@@ -164,7 +170,7 @@ async function showRoute() {
         else link.removeAttribute("aria-current");
     });
 
-    await ROUTES[name].render();
+    await ROUTES[name].render(params);
 }
 
 function showView(name) {
@@ -227,29 +233,42 @@ function setupSignIn() {
         handleDevSignIn($("#dev-email").value.trim());
     });
 
-    $("#sign-out").addEventListener("click", showSignedOut);
+    $("#sign-out").addEventListener("click", () => signOutAndReload());
 }
 
-async function showSignedOut(message = "") {
+const SIGNIN_MESSAGE_KEY = "projecthub.signinMessage";
+
+/**
+ * Sign out by reloading the page. A reload clears everything the previous
+ * person loaded (their projects, applications, applicants), so nothing from
+ * one session can show up in the next.
+ */
+function signOutAndReload(message = "") {
     signOut();
-    $("#toasts").replaceChildren();
-    state.me = null;
-    updateNav();
 
     try {
-        state.config = await publicRequest("/auth/config");
+        if (message) sessionStorage.setItem(SIGNIN_MESSAGE_KEY, message);
     } catch {
-        // Keep the previous list of test users.
+        // Storage blocked: the sign-in screen just won't explain why.
     }
 
-    renderDevSignIn();
-    setMessage("signin-message", typeof message === "string" ? message : "", "error");
-    showView("signin");
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    window.location.reload();
+}
+
+function takeSignInMessage() {
+    try {
+        const message = sessionStorage.getItem(SIGNIN_MESSAGE_KEY) || "";
+        sessionStorage.removeItem(SIGNIN_MESSAGE_KEY);
+        return message;
+    } catch {
+        return "";
+    }
 }
 
 function onUnauthorized() {
     if (authMode() === "dev" && state.me) {
-        showSignedOut("Your session ended. Please sign in again.");
+        signOutAndReload("Your session ended. Please sign in again.");
     }
 }
 
@@ -314,6 +333,7 @@ async function start() {
 
     if (state.config.mode === "dev") {
         renderDevSignIn();
+        setMessage("signin-message", takeSignInMessage(), "error");
         showView("signin");
         return;
     }

@@ -67,7 +67,7 @@ async def submit_application(
             """
             INSERT INTO applications (user_id, project_id, application_status,
                 resume_filename, cover_letter)
-            VALUES (?, ?, 'Submitted', ?, ?)
+            VALUES (?, ?, 'New', ?, ?)
             """,
             (user.id, project_id, resume_filename, cover_letter.strip()),
         ).lastrowid
@@ -107,7 +107,7 @@ async def submit_application(
     return {
         "message": "Application submitted successfully!",
         "application_id": application_id,
-        "status": "Submitted",
+        "status": "New",
         "resume_attached": bool(resume_filename),
         "match_score": match["score"],
     }

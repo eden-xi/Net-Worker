@@ -15,6 +15,10 @@ PROJECT_COLUMNS = [
 ]
 
 PROJECT_STATUSES = ["Open", "On Hold", "Filled", "Closed"]
+APPLICATION_STATUSES = ["New", "Shortlisted", "Accepted", "Rejected"]
+
+# Earlier status names, renamed in place on startup.
+RENAMED_APPLICATION_STATUSES = {"Submitted": "New", "Under Review": "Shortlisted"}
 
 
 def get_database_path():
@@ -71,6 +75,7 @@ PROJECTS_SQL = """
         start_date TEXT,
         status TEXT DEFAULT 'Open',
         description TEXT,
+        openings INTEGER NOT NULL DEFAULT 1,
         created_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP,
@@ -94,7 +99,7 @@ APPLICATIONS_SQL = """
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL REFERENCES users(id),
         project_id INTEGER NOT NULL REFERENCES projects(id),
-        application_status TEXT DEFAULT 'Submitted',
+        application_status TEXT DEFAULT 'New',
         resume_filename TEXT,
         cover_letter TEXT,
         submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -195,6 +200,15 @@ def create_tables():
 
         cursor.execute(APPLICATIONS_SQL.format(name="applications"))
         cursor.execute(MATCHES_SQL.format(name="matches"))
+
+        if "openings" not in _columns(cursor, "projects"):
+            cursor.execute("ALTER TABLE projects ADD COLUMN openings INTEGER NOT NULL DEFAULT 1")
+
+        for old, new in RENAMED_APPLICATION_STATUSES.items():
+            cursor.execute(
+                "UPDATE applications SET application_status = ? WHERE application_status = ?",
+                (new, old),
+            )
 
         for statement in [
             "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",

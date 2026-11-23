@@ -63,7 +63,8 @@
 
             <p class="nav-section hidden" id="nav-manage-label">Manage</p>
             <a href="#/pm" data-route="pm" class="hidden" id="nav-pm">
-                <span data-icon="briefcase"></span><span>PM dashboard</span></a>
+                <span data-icon="briefcase"></span><span>PM dashboard</span>
+                <span class="nav-badge hidden" id="nav-pm-badge" aria-label="new applicants"></span></a>
             <a href="#/post-project" data-route="post-project" class="hidden nav-cta" id="nav-post">
                 <span data-icon="plus"></span><span>Post a project</span></a>
             <a href="#/admin" data-route="admin" class="hidden" id="nav-admin">
@@ -305,6 +306,11 @@
             </details>
         </section>
 
+        <!-- PM: ONE PROJECT -->
+        <section class="view hidden" data-view="pm-project">
+            <div id="pm-project-page"></div>
+        </section>
+
         <!-- ADMIN -->
         <section class="view hidden" data-view="admin">
             <header class="view-header">
@@ -331,13 +337,13 @@
 
 <!-- Side panel for details and forms -->
 <div class="drawer-backdrop hidden" id="drawer-backdrop"></div>
-<aside class="drawer hidden" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+<div class="drawer hidden" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
     <header class="drawer-header">
         <h2 id="drawer-title"></h2>
         <button type="button" class="icon-button" id="drawer-close" aria-label="Close">&times;</button>
     </header>
     <div class="drawer-body" id="drawer-body"></div>
-</aside>
+</div>
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
 

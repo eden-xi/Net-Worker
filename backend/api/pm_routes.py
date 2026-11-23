@@ -19,7 +19,7 @@ from backend.access import get_managed_application, get_managed_project
 from backend.api.deps import get_db
 from backend.auth import get_current_user, require_pm
 from backend.csv_import import map_csv_headers
-from backend.database.database import PROJECT_COLUMNS, PROJECT_STATUSES
+from backend.database.database import APPLICATION_STATUSES, PROJECT_COLUMNS, PROJECT_STATUSES
 from backend.matching import Candidate, score_project
 from backend.resumes import MEDIA_TYPES, resume_path
 from backend.users import avatar_version
@@ -27,7 +27,6 @@ from backend.users import avatar_version
 router = APIRouter()
 
 MAX_CSV_SIZE = 2 * 1024 * 1024
-APPLICATION_STATUSES = ["Submitted", "Under Review", "Accepted", "Rejected"]
 
 ProjectStatus = Literal["Open", "On Hold", "Filled", "Closed"]
 
@@ -42,6 +41,7 @@ class ProjectFields(BaseModel):
     start_date: str = Field("", max_length=30)
     status: ProjectStatus = "Open"
     description: str = Field("", max_length=10000)
+    openings: int = Field(1, ge=1, le=500)
 
 
 class ProjectCreate(ProjectFields):
@@ -58,6 +58,7 @@ class ProjectUpdate(BaseModel):
     start_date: str | None = Field(None, max_length=30)
     status: ProjectStatus | None = None
     description: str | None = Field(None, max_length=10000)
+    openings: int | None = Field(None, ge=1, le=500)
 
 
 class ManagerAdd(BaseModel):
@@ -94,7 +95,10 @@ def my_projects(user=Depends(get_current_user), connection=Depends(get_db)):
              WHERE applications.project_id = projects.id) AS applicant_count,
             (SELECT COUNT(*) FROM applications
              WHERE applications.project_id = projects.id
-             AND applications.application_status = 'Submitted') AS new_applicant_count
+             AND applications.application_status = 'New') AS new_applicant_count,
+            (SELECT COUNT(*) FROM applications
+             WHERE applications.project_id = projects.id
+             AND applications.application_status = 'Accepted') AS accepted_count
         FROM projects
         JOIN project_managers
             ON project_managers.project_id = projects.id
@@ -118,11 +122,12 @@ def create_project(body: ProjectCreate, user=Depends(require_pm), connection=Dep
 
     project_id = connection.execute(
         f"""
-        INSERT INTO projects ({", ".join(PROJECT_COLUMNS)}, created_by, updated_at, closed_at)
-        VALUES ({", ".join("?" for _ in PROJECT_COLUMNS)}, ?, CURRENT_TIMESTAMP,
+        INSERT INTO projects ({", ".join(PROJECT_COLUMNS)}, openings, created_by, updated_at, closed_at)
+        VALUES ({", ".join("?" for _ in PROJECT_COLUMNS)}, ?, ?, CURRENT_TIMESTAMP,
             CASE WHEN ? = 'Closed' THEN CURRENT_TIMESTAMP END)
         """,
-        [values[column] for column in PROJECT_COLUMNS] + [user.id, values["status"]],
+        [values[column] for column in PROJECT_COLUMNS]
+        + [values["openings"], user.id, values["status"]],
     ).lastrowid
 
     connection.execute(
@@ -163,6 +168,30 @@ def update_project(
         connection.commit()
 
     return _project_response(connection, project_id, user)
+
+
+@router.delete("/projects/{project_id}")
+def delete_project(project_id: int, user=Depends(get_current_user), connection=Depends(get_db)):
+    """Owner only: delete a project posted by mistake. Projects that have
+    applicants can't be deleted (close them instead), so no one's application
+    disappears."""
+    get_managed_project(connection, project_id, user, owner_only=True)
+
+    has_applicants = connection.execute(
+        "SELECT 1 FROM applications WHERE project_id = ? LIMIT 1", (project_id,)
+    ).fetchone()
+
+    if has_applicants:
+        raise HTTPException(
+            409, "This project has applicants, so it can't be deleted. Close it instead."
+        )
+
+    connection.execute("DELETE FROM project_managers WHERE project_id = ?", (project_id,))
+    connection.execute("DELETE FROM matches WHERE project_id = ?", (project_id,))
+    connection.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+    connection.commit()
+
+    return {"deleted": project_id}
 
 
 @router.post("/projects/{project_id}/close")
@@ -320,6 +349,12 @@ async def upload_projects_csv(
             )
             values["status"] = status or "Open"
 
+        openings = None
+        if "openings" in mapping:
+            raw = (row.get(mapping["openings"]) or "").strip()
+            if raw.isdigit() and 1 <= int(raw) <= 500:
+                openings = int(raw)
+
         existing = connection.execute(
             """
             SELECT projects.id, project_managers.user_id AS manager
@@ -361,7 +396,21 @@ async def upload_projects_csv(
                 """,
                 [*changes.values(), existing["id"]],
             )
+            project_id = existing["id"]
             updated += 1
+
+        if openings is not None:
+            connection.execute("UPDATE projects SET openings = ? WHERE id = ?", (openings, project_id))
+
+        # Keep closed_at in step with the status, as closing in the app does.
+        connection.execute(
+            """
+            UPDATE projects SET closed_at = CASE
+                WHEN status = 'Closed' THEN COALESCE(closed_at, CURRENT_TIMESTAMP) END
+            WHERE id = ?
+            """,
+            (project_id,),
+        )
 
     connection.commit()
 

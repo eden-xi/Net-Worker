@@ -40,19 +40,37 @@ export function setMessage(element, text, kind = "success") {
     element.classList.toggle("error", Boolean(text) && kind === "error");
 }
 
-export function toast(text, kind = "success") {
+/**
+ * Show a short notification. `action` adds a button such as Undo:
+ * { label: "Undo", onClick() {...} }.
+ */
+export function toast(text, kind = "success", action = null) {
     const container = document.getElementById("toasts");
     const item = document.createElement("div");
 
     item.className = `toast ${kind === "error" ? "error" : ""}`;
     item.setAttribute("role", kind === "error" ? "alert" : "status");
     item.innerHTML = `${icon(kind === "error" ? "x" : "check")}<span></span>
-        <button type="button" aria-label="Dismiss">&times;</button>`;
+        ${action ? `<button type="button" class="toast-action"></button>` : ""}
+        <button type="button" class="toast-close" aria-label="Dismiss">&times;</button>`;
     item.querySelector("span").textContent = text;
-    item.querySelector("button").addEventListener("click", () => item.remove());
+    item.querySelector(".toast-close").addEventListener("click", () => item.remove());
+
+    if (action) {
+        const button = item.querySelector(".toast-action");
+        button.textContent = action.label;
+        button.addEventListener("click", () => {
+            item.remove();
+            action.onClick();
+        });
+    }
+
     container.appendChild(item);
 
-    setTimeout(() => item.remove(), kind === "error" ? 7000 : 4000);
+    // Keep at most three on screen so they never cover the page.
+    while (container.children.length > 3) container.firstElementChild.remove();
+
+    setTimeout(() => item.remove(), action ? 8000 : kind === "error" ? 7000 : 4000);
 }
 
 export function formatDate(value, options = { month: "short", day: "numeric", year: "numeric" }) {
@@ -67,18 +85,27 @@ export function formatDate(value, options = { month: "short", day: "numeric", ye
 
 const STATUS_PILLS = {
     open: "success",
+    new: "strong",
+    shortlisted: "warning",
     accepted: "success",
-    submitted: "",
-    "under review": "warning",
-    "on hold": "warning",
     rejected: "danger",
+    "on hold": "warning",
     filled: "neutral",
     closed: "neutral",
 };
 
-export function statusPill(status) {
+// What employees see for each application status. "Shortlisted" stays
+// internal to project managers.
+export const EMPLOYEE_STATUS_LABELS = {
+    New: "Submitted",
+    Shortlisted: "In review",
+    Accepted: "Accepted",
+    Rejected: "Not selected",
+};
+
+export function statusPill(status, label = status) {
     const kind = STATUS_PILLS[String(status || "").trim().toLowerCase()] ?? "neutral";
-    return `<span class="pill ${kind}">${escapeHTML(status || "")}</span>`;
+    return `<span class="pill ${kind}">${escapeHTML(label || "")}</span>`;
 }
 
 export function chips(skills, kind = "", limit = Infinity) {
@@ -97,10 +124,12 @@ export function monogram(text) {
 }
 
 export function experienceNote(experience) {
-    if (!experience || experience.fit === "unknown") return "";
+    // Nothing useful to say when the resume states no years, or the role
+    // (junior/entry level) asks for none.
+    if (!experience || experience.fit === "unknown" || !Number(experience.required_years)) return "";
 
-    const years = `about ${Number(experience.years)} yrs on your resume`;
-    const needed = `${Number(experience.required_years)}+ yrs expected`;
+    const years = `resume shows about ${Number(experience.years)}`;
+    const needed = `${Number(experience.required_years)}+ years expected`;
 
     return experience.fit === "below"
         ? `<p class="experience-note below">${icon("layers")}${needed}, ${years} (-${Number(experience.penalty)} pts)</p>`
@@ -219,8 +248,30 @@ export function setupDrawer() {
     document.getElementById("drawer-close").addEventListener("click", closeDrawer);
     document.getElementById("drawer-backdrop").addEventListener("click", closeDrawer);
     document.addEventListener("keydown", event => {
-        if (event.key === "Escape" && !document.getElementById("drawer").classList.contains("hidden")) {
+        const drawer = document.getElementById("drawer");
+        if (drawer.classList.contains("hidden")) return;
+
+        if (event.key === "Escape") {
             closeDrawer();
+            return;
+        }
+
+        // Keep keyboard focus inside the open panel.
+        if (event.key === "Tab") {
+            const focusable = [...drawer.querySelectorAll(
+                "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex='-1'])"
+            )].filter(element => element.offsetParent !== null);
+            if (!focusable.length) return;
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
         }
     });
 }
