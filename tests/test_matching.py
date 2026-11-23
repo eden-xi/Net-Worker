@@ -75,3 +75,26 @@ def test_detect_skills():
     assert detect_skills(text, ["SQL", "Power BI", "DAX", "Excel", "excel"]) == [
         "Power BI", "DAX", "Excel",
     ]
+
+
+def test_years_of_experience_extraction():
+    from backend.matching import extract_years_of_experience
+
+    assert extract_years_of_experience("Data engineer with 6+ years of experience") == 6
+    assert extract_years_of_experience("3 yrs at Acme, then 2 years at Beta") == 3
+    assert extract_years_of_experience("No numbers here") is None
+    assert extract_years_of_experience("") is None
+
+
+def test_experience_below_seniority_lowers_score():
+    project = {"required_skills": "Python", "nice_to_have_skills": "", "seniority": "Senior"}
+
+    junior = score_project(project, Candidate("Python", "2 years of experience"))
+    senior = score_project(project, Candidate("Python", "9 years of experience"))
+    unknown = score_project(project, Candidate("Python"))
+
+    assert senior["score"] == 100 and senior["experience"]["fit"] == "meets"
+    assert junior["skill_score"] == 100
+    assert junior["score"] == 85  # 3 years short, capped at 15 points
+    assert junior["experience"] == {"years": 2, "required_years": 5, "fit": "below", "penalty": 15}
+    assert unknown["score"] == 100 and unknown["experience"]["fit"] == "unknown"

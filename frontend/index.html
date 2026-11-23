@@ -1,389 +1,345 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProjectHub | Project Marketplace</title>
+    <title>ProjectHub</title>
+    <link rel="icon" href="favicon-32.png" sizes="32x32">
+    <link rel="icon" href="icon.png" sizes="192x192">
+    <link rel="apple-touch-icon" href="icon.png">
     <link rel="stylesheet" href="styles.css">
-    <script defer src="app.js"></script>
+    <script type="module" src="js/main.js"></script>
 </head>
 <body>
 
-<div class="app-container">
+<!-- The ProjectHub mark, reused wherever the logo appears. Same geometry as
+     scripts/make_icons.py. -->
+<svg class="sr-only" aria-hidden="true">
+    <defs>
+        <linearGradient id="logo-gradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#BD5CFF"/>
+            <stop offset="0.45" stop-color="#A100FF"/>
+            <stop offset="1" stop-color="#6200AA"/>
+        </linearGradient>
+        <symbol id="logo" viewBox="0 0 100 100">
+            <rect width="100" height="100" rx="22" fill="url(#logo-gradient)"/>
+            <g stroke="#FFFFFF" stroke-width="5.5">
+                <line x1="50" y1="53" x2="50" y2="26"/>
+                <line x1="50" y1="53" x2="73.4" y2="66.5"/>
+                <line x1="50" y1="53" x2="26.6" y2="66.5"/>
+            </g>
+            <g fill="#FFFFFF">
+                <circle cx="50" cy="26" r="8.5"/>
+                <circle cx="73.4" cy="66.5" r="8.5"/>
+                <circle cx="26.6" cy="66.5" r="8.5"/>
+                <circle cx="50" cy="53" r="12.5"/>
+            </g>
+            <circle cx="50" cy="53" r="5" fill="#A100FF"/>
+        </symbol>
+    </defs>
+</svg>
 
-    <aside class="sidebar">
-        <div class="brand">
-            <h2>ProjectHub</h2>
-            <p>Internal Project Marketplace</p>
+<div class="app">
+
+    <nav class="app-nav" aria-label="ProjectHub">
+        <a class="brand" href="#/browse">
+            <svg class="brand-logo" aria-hidden="true"><use href="#logo"/></svg>
+            <span class="brand-text">
+                <strong>ProjectHub</strong>
+                <span>Internal project marketplace</span>
+            </span>
+        </a>
+
+        <div class="nav-links" id="nav-links">
+            <p class="nav-section">Discover</p>
+            <a href="#/browse" data-route="browse"><span data-icon="search"></span><span>Browse</span></a>
+            <a href="#/recommended" data-route="recommended">
+                <span data-icon="sparkle"></span><span>For you</span></a>
+
+            <p class="nav-section">You</p>
+            <a href="#/applications" data-route="applications">
+                <span data-icon="clipboard"></span><span>Applications</span></a>
+            <a href="#/profile" data-route="profile"><span data-icon="user"></span><span>Profile</span></a>
+
+            <p class="nav-section hidden" id="nav-manage-label">Manage</p>
+            <a href="#/pm" data-route="pm" class="hidden" id="nav-pm">
+                <span data-icon="briefcase"></span><span>PM dashboard</span></a>
+            <a href="#/post-project" data-route="post-project" class="hidden nav-cta" id="nav-post">
+                <span data-icon="plus"></span><span>Post a project</span></a>
+            <a href="#/admin" data-route="admin" class="hidden" id="nav-admin">
+                <span data-icon="shield"></span><span>Admin</span></a>
         </div>
 
-        <nav class="navigation">
-            <button class="nav-button active" data-view="browse">
-                Browse Projects
-            </button>
-
-            <button class="nav-button" data-view="profile">
-                My Profile
-            </button>
-
-            <button class="nav-button" data-view="recommended">
-                Recommended Projects
-            </button>
-
-            <button class="nav-button" data-view="my-applications">
-                My Applications
-            </button>
-
-            <div class="nav-divider"></div>
-
-            <button class="nav-button" data-view="manager">
-                Manager Dashboard
-            </button>
-        </nav>
-
-        <div class="sidebar-footer">
-            <p>ProjectHub v2.0</p>
-        </div>
-    </aside>
-
-
-    <main class="main-content">
-
-        <div id="demo-banner" class="demo-banner hidden" role="status">
-            <strong>Demo mode:</strong> the ProjectHub API isn't running, so these
-            are the built-in sample roles. Start the API to apply, get
-            recommendations, and use the manager dashboard.
-        </div>
-
-        <!-- BROWSE PROJECTS -->
-        <section id="browse-view" class="view">
-
-            <div class="page-header">
-                <h1>Browse Projects</h1>
-                <p>Explore available opportunities and find your next project.</p>
+        <div class="nav-footer hidden" id="nav-user">
+            <a class="user-card" href="#/profile" id="user-card">
+                <span id="user-card-avatar"></span>
+                <span class="user-card-text">
+                    <strong id="nav-user-name"></strong>
+                    <span id="nav-user-role"></span>
+                </span>
+            </a>
+            <div class="theme-switch" id="theme-switch" role="radiogroup" aria-label="Theme">
+                <button type="button" role="radio" data-theme-choice="system" title="Match system">
+                    <span data-icon="monitor"></span><span class="sr-only">System</span></button>
+                <button type="button" role="radio" data-theme-choice="light" title="Light">
+                    <span data-icon="sun"></span><span class="sr-only">Light</span></button>
+                <button type="button" role="radio" data-theme-choice="dark" title="Dark">
+                    <span data-icon="moon"></span><span class="sr-only">Dark</span></button>
             </div>
+            <button type="button" class="sign-out hidden" id="sign-out">
+                <span data-icon="logout"></span><span>Sign out</span></button>
+        </div>
+    </nav>
 
-            <div class="search-container">
-                <input
-                    type="text"
-                    id="project-search"
-                    placeholder="Search projects, skills, or job titles..."
-                >
+    <main class="app-main" id="main">
 
-                <select id="location-filter">
-                    <option value="">All Locations</option>
+        <div id="banner" class="banner hidden" role="status"></div>
+
+        <!-- SIGN IN (dev mode) -->
+        <section class="view hidden signin" data-view="signin">
+            <div class="signin-card">
+                <svg class="signin-logo" aria-hidden="true"><use href="#logo"/></svg>
+                <h1>Welcome to ProjectHub</h1>
+                <p class="muted" id="signin-intro">Development mode: choose a test user to sign in as.
+                    In Microsoft Teams you're signed in automatically.</p>
+                <div id="dev-user-list" class="signin-users"></div>
+                <form id="dev-login-form" class="inline-form">
+                    <label class="sr-only" for="dev-email">Email</label>
+                    <input type="email" id="dev-email" placeholder="Or sign in as any email" required>
+                    <button type="submit" class="button">Continue</button>
+                </form>
+                <p class="message" id="signin-message"></p>
+            </div>
+        </section>
+
+        <!-- BROWSE (home) -->
+        <section class="view hidden" data-view="browse">
+            <div id="home-hero"></div>
+
+            <header class="view-header">
+                <h1>Browse projects</h1>
+                <p>Open opportunities across the organization.</p>
+            </header>
+            <div class="toolbar">
+                <div class="search-field">
+                    <span data-icon="search"></span>
+                    <label class="sr-only" for="project-search">Search</label>
+                    <input type="search" id="project-search" placeholder="Search by title, skill or client">
+                </div>
+                <label class="sr-only" for="location-filter">Location</label>
+                <select id="location-filter"><option value="">All locations</option></select>
+                <label class="sr-only" for="sort-order">Sort</label>
+                <select id="sort-order">
+                    <option value="match">Best match</option>
+                    <option value="newest">Newest</option>
+                    <option value="start">Starting soonest</option>
                 </select>
-
-                <button id="search-button" class="primary-button">
-                    Search
-                </button>
             </div>
-
-            <div class="stats-container">
-                <div class="stat-card">
-                    <h3 id="project-count">0</h3>
-                    <p>Available Projects</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3 id="match-count">0</h3>
-                    <p>Recommended Matches</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3 id="skill-count">0</h3>
-                    <p>Your Skills</p>
-                </div>
-            </div>
-
-            <div id="project-list" class="project-grid"></div>
-
+            <p class="result-count" id="browse-count"></p>
+            <div id="project-list" class="card-grid"></div>
         </section>
 
-
-        <!-- PROFILE -->
-        <section id="profile-view" class="view hidden">
-
-            <div class="page-header">
-                <h1>My Profile</h1>
-                <p>Manage your employee information and skills.</p>
+        <!-- RECOMMENDED -->
+        <section class="view hidden" data-view="recommended">
+            <header class="view-header">
+                <h1>Recommended for you</h1>
+                <p>Open projects ranked by your skills, resume and experience.</p>
+            </header>
+            <div class="toolbar">
+                <label class="sr-only" for="min-score">Minimum match</label>
+                <select id="min-score">
+                    <option value="1">Any match</option>
+                    <option value="25">25% match or better</option>
+                    <option value="50">50% match or better</option>
+                    <option value="75">75% match or better</option>
+                </select>
+                <label class="sr-only" for="rec-location">Location</label>
+                <select id="rec-location"><option value="">All locations</option></select>
+                <label class="sr-only" for="rec-seniority">Seniority</label>
+                <select id="rec-seniority"><option value="">All levels</option></select>
             </div>
-
-            <div class="profile-card">
-
-                <h2>Your Skills</h2>
-
-                <p>Enter your skills separated by commas.</p>
-
-                <textarea
-                    id="employee-skills"
-                    placeholder="Example: SQL, Python, Excel, Power BI"
-                ></textarea>
-
-                <h2>Read Skills From Your Resume</h2>
-
-                <p>
-                    Choose a PDF or DOCX resume and ProjectHub adds the skills
-                    it recognizes to the list above. The file is not stored.
-                </p>
-
-                <input
-                    type="file"
-                    id="resume-file"
-                    accept=".pdf,.docx"
-                >
-
-                <p id="resume-status"></p>
-
-                <button id="save-profile" class="primary-button">
-                    Save Profile
-                </button>
-
-                <p id="profile-status"></p>
-
-            </div>
-
+            <div id="recommended-list" class="card-grid"></div>
         </section>
-
-
-        <!-- RECOMMENDATIONS -->
-        <section id="recommended-view" class="view hidden">
-
-            <div class="page-header">
-                <h1>Recommended Projects</h1>
-                <p>Explore projects that match your skills.</p>
-            </div>
-
-            <div id="recommended-list" class="project-grid"></div>
-
-        </section>
-
 
         <!-- MY APPLICATIONS -->
-        <section id="my-applications-view" class="view hidden">
+        <section class="view hidden" data-view="applications">
+            <header class="view-header">
+                <h1>My applications</h1>
+                <p>Where each of your applications stands.</p>
+            </header>
+            <div id="application-list" class="stack-list"></div>
+        </section>
 
-            <div class="page-header">
-                <h1>My Applications</h1>
-                <p>Track the status of projects you have applied to.</p>
+        <!-- PROFILE -->
+        <section class="view hidden" data-view="profile">
+            <header class="view-header">
+                <h1>My profile</h1>
+                <p>Your skills and resume power your recommendations and are shared with project managers when you apply.</p>
+            </header>
+
+            <div class="profile-layout">
+                <div class="card profile-card">
+                    <div id="profile-avatar"></div>
+                    <h2 id="profile-name"></h2>
+                    <p class="muted" id="profile-email"></p>
+                    <p id="profile-role"></p>
+                    <div class="actions centered">
+                        <label class="button">
+                            <span data-icon="camera"></span><span id="photo-button-label">Add photo</span>
+                            <input type="file" id="avatar-file" accept="image/png,image/jpeg,image/webp,image/gif" class="sr-only">
+                        </label>
+                        <button type="button" class="button ghost hidden" id="remove-photo">Remove</button>
+                    </div>
+                    <p class="message" id="avatar-message"></p>
+                    <div id="profile-checklist"></div>
+                </div>
+
+                <div class="profile-main">
+                    <div class="card">
+                        <div class="card-title">
+                            <h2>Skills</h2>
+                            <span class="muted" id="skill-count"></span>
+                        </div>
+                        <div id="skill-chips" class="chips editable"></div>
+                        <form id="add-skill-form" class="inline-form">
+                            <label class="sr-only" for="new-skill">Add skills</label>
+                            <input type="text" id="new-skill" placeholder="Type a skill and press Enter (commas for several)">
+                            <button type="submit" class="button">Add</button>
+                        </form>
+                        <div class="actions">
+                            <button type="button" class="button primary" id="save-skills" disabled>Save skills</button>
+                        </div>
+                        <p class="message" id="skills-message"></p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">
+                            <h2>Resume</h2>
+                        </div>
+                        <p class="muted" id="resume-summary"></p>
+                        <label class="dropzone" id="resume-dropzone">
+                            <span data-icon="upload"></span>
+                            <strong>Upload a resume</strong>
+                            <span class="muted">PDF or DOCX, up to 5 MB. We'll suggest skills we find in it.</span>
+                            <input type="file" id="resume-file" accept=".pdf,.docx" class="sr-only">
+                        </label>
+                        <div id="resume-suggestions" class="suggestions hidden">
+                            <p><strong>Skills found in your resume.</strong> Select the ones to add:</p>
+                            <div id="suggestion-list" class="chips"></div>
+                            <div class="actions">
+                                <button type="button" class="button primary" id="add-suggestions">Add selected skills</button>
+                            </div>
+                        </div>
+                        <p class="message" id="resume-message"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BECOME A PROJECT MANAGER -->
+        <section class="view hidden" data-view="post-project">
+            <div class="feature-card">
+                <span class="feature-icon" data-icon="briefcase"></span>
+                <h1>Post a project</h1>
+                <p class="muted">Need people for a project? Turn on project manager access to publish postings and review applicants.</p>
+                <ul class="feature-list">
+                    <li><span data-icon="check"></span>Create, edit and close your own project postings</li>
+                    <li><span data-icon="check"></span>See applicants ranked by how well they match</li>
+                    <li><span data-icon="check"></span>Add colleagues as co-managers</li>
+                </ul>
+                <p class="muted small">You'll only see projects you create or are added to. Everything else stays the same.</p>
+                <button type="button" class="button primary large" id="become-pm">Turn on project manager access</button>
+                <p class="message" id="become-pm-message"></p>
+            </div>
+        </section>
+
+        <!-- PM DASHBOARD -->
+        <section class="view hidden" data-view="pm">
+            <header class="view-header with-action">
+                <div>
+                    <h1>PM dashboard</h1>
+                    <p>Projects you own or co-manage.</p>
+                </div>
+                <button type="button" class="button primary" id="new-project">
+                    <span data-icon="plus"></span><span>New project</span></button>
+            </header>
+
+            <div class="stats">
+                <div class="stat">
+                    <span class="stat-icon" data-icon="briefcase"></span>
+                    <div><strong id="pm-open">0</strong><span>Open projects</span></div>
+                </div>
+                <div class="stat">
+                    <span class="stat-icon" data-icon="users"></span>
+                    <div><strong id="pm-applicants">0</strong><span>Total applicants</span></div>
+                </div>
+                <div class="stat highlight">
+                    <span class="stat-icon" data-icon="inbox"></span>
+                    <div><strong id="pm-new">0</strong><span>Waiting for review</span></div>
+                </div>
             </div>
 
-            <div class="profile-card">
+            <div class="toolbar">
+                <div class="tabs" id="pm-tabs" role="tablist" aria-label="Filter projects"></div>
+                <div class="search-field">
+                    <span data-icon="search"></span>
+                    <label class="sr-only" for="pm-search">Search your projects</label>
+                    <input type="search" id="pm-search" placeholder="Search your projects">
+                </div>
+            </div>
 
-                <h2>Find Your Applications</h2>
+            <div id="pm-project-list" class="project-rows"></div>
 
-                <p>
-                    Enter the same email address you used when submitting
-                    your project applications.
+            <details class="card import-card">
+                <summary><span data-icon="upload"></span>Import projects from a CSV</summary>
+                <p class="muted">
+                    Columns are recognized by common names (Job ID, Job Title, Skills, Location, Status...).
+                    Rows with a Role ID you already manage update that project.
                 </p>
-
-                <div class="search-container">
-
-                    <input
-                        type="email"
-                        id="tracking-email"
-                        placeholder="Enter your email address..."
-                    >
-
-                    <button
-                        type="button"
-                        id="load-applications-button"
-                        class="primary-button"
-                    >
-                        Find Applications
-                    </button>
-
+                <div class="inline-form">
+                    <label class="sr-only" for="csv-file">CSV file</label>
+                    <input type="file" id="csv-file" accept=".csv">
+                    <button type="button" class="button" id="upload-csv">Upload CSV</button>
                 </div>
-
-                <p id="tracking-status"></p>
-
-            </div>
-
-            <div class="page-header">
-                <h2>Application History</h2>
-            </div>
-
-            <div
-                id="application-history-list"
-                class="project-grid"
-            >
-                <p>Enter your email address to view your applications.</p>
-            </div>
-
+                <p class="message" id="csv-message"></p>
+            </details>
         </section>
 
-
-        <!-- MANAGER DASHBOARD -->
-        <section id="manager-view" class="view hidden">
-
-            <div class="page-header">
-                <h1>Manager Dashboard</h1>
-                <p>Manage project opportunities and employee applications.</p>
-            </div>
-
-            <div class="stats-container">
-                <div class="stat-card">
-                    <h3 id="manager-open">0</h3>
-                    <p>Open Projects</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3 id="manager-closed">0</h3>
-                    <p>Closed Projects</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3 id="manager-total">0</h3>
-                    <p>Total Projects</p>
+        <!-- ADMIN -->
+        <section class="view hidden" data-view="admin">
+            <header class="view-header">
+                <h1>Users and roles</h1>
+                <p>Grant or remove project manager access. Changing a role never changes who manages a project.</p>
+            </header>
+            <div class="toolbar">
+                <div class="search-field">
+                    <span data-icon="search"></span>
+                    <label class="sr-only" for="admin-search">Search people</label>
+                    <input type="search" id="admin-search" placeholder="Search by name or email">
                 </div>
             </div>
-
-            <div class="profile-card">
-                <h2>Upload Projects Using CSV</h2>
-
-                <input
-                    type="file"
-                    id="manager-csv-file"
-                    accept=".csv"
-                >
-
-                <button id="upload-csv-button" class="primary-button">
-                    Upload CSV
-                </button>
-
-                <p id="csv-upload-status"></p>
+            <div class="card table-wrap">
+                <table class="table">
+                    <thead><tr><th>Person</th><th>Projects managed</th><th>Role</th></tr></thead>
+                    <tbody id="admin-users"></tbody>
+                </table>
             </div>
-
-            <div class="profile-card">
-                <h2>Published Projects</h2>
-                <div id="manager-project-list"></div>
-            </div>
-
-            <div id="manager-applicants" class="profile-card hidden">
-                <h2 id="manager-applicants-title">Applicants</h2>
-                <div id="manager-applicant-list" class="project-grid"></div>
-            </div>
-
         </section>
-
-
-        <!-- PROJECT DETAILS MODAL -->
-        <div id="project-details-modal" class="modal hidden">
-
-            <div class="modal-content">
-
-                <button
-                    type="button"
-                    class="modal-close"
-                    id="close-details"
-                    aria-label="Close project details"
-                >
-                    &times;
-                </button>
-
-                <div id="project-details-content"></div>
-
-                <button
-                    type="button"
-                    id="details-apply-button"
-                    class="primary-button"
-                >
-                    Apply for This Project
-                </button>
-
-            </div>
-
-        </div>
-
-
-        <!-- APPLICATION MODAL -->
-        <div id="application-modal" class="modal hidden">
-
-            <div class="modal-content">
-
-                <button
-                    type="button"
-                    class="modal-close"
-                    id="close-application"
-                    aria-label="Close application form"
-                >
-                    &times;
-                </button>
-
-                <div class="page-header">
-                    <h1>Project Application</h1>
-                    <p id="application-project-title"></p>
-                </div>
-
-                <form id="application-form">
-
-                    <input
-                        type="hidden"
-                        id="application-project-id"
-                    >
-
-                    <label for="applicant-name">Full Name</label>
-
-                    <input
-                        type="text"
-                        id="applicant-name"
-                        required
-                    >
-
-                    <label for="applicant-email">Email Address</label>
-
-                    <input
-                        type="email"
-                        id="applicant-email"
-                        required
-                    >
-
-                    <label for="applicant-skills">Your Skills</label>
-
-                    <textarea
-                        id="applicant-skills"
-                        placeholder="SQL, Python, Excel..."
-                    ></textarea>
-
-                    <label for="application-cover-letter">
-                        Why are you interested in this project?
-                    </label>
-
-                    <textarea
-                        id="application-cover-letter"
-                        rows="5"
-                        placeholder="Tell the manager why you are interested..."
-                    ></textarea>
-
-                    <label for="application-resume">
-                        Resume (PDF or DOCX)
-                    </label>
-
-                    <input
-                        type="file"
-                        id="application-resume"
-                        accept=".pdf,.docx"
-                    >
-
-                    <p id="application-status"></p>
-
-                    <button
-                        type="submit"
-                        class="primary-button"
-                        id="submit-application"
-                    >
-                        Submit Application
-                    </button>
-
-                </form>
-
-            </div>
-
-        </div>
 
     </main>
-
 </div>
+
+<!-- Side panel for details and forms -->
+<div class="drawer-backdrop hidden" id="drawer-backdrop"></div>
+<aside class="drawer hidden" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <header class="drawer-header">
+        <h2 id="drawer-title"></h2>
+        <button type="button" class="icon-button" id="drawer-close" aria-label="Close">&times;</button>
+    </header>
+    <div class="drawer-body" id="drawer-body"></div>
+</aside>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
 </body>
 </html>

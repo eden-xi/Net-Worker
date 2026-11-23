@@ -1,255 +1,113 @@
+"""Applying to projects. The applicant is always the signed-in user."""
+
 import json
 import sqlite3
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from pydantic import BaseModel, EmailStr, ValidationError, TypeAdapter
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from backend.api.resume_routes import read_resume, save_resume
-from backend.database.database import get_connection
+from backend.api.deps import get_db
+from backend.auth import get_current_user
 from backend.matching import Candidate, score_project
+from backend.resumes import delete_resume_if_unused, read_resume, resume_path, save_resume
+from backend.users import get_user_row
 
 router = APIRouter()
 
-ALLOWED_STATUSES = ["Submitted", "Under Review", "Accepted", "Rejected"]
-
-_email_adapter = TypeAdapter(EmailStr)
-
-
-def validate_email(email):
-    try:
-        return str(_email_adapter.validate_python(email.strip())).lower()
-    except ValidationError:
-        raise HTTPException(400, "Please provide a valid email address.")
-
-
-class ApplicationStatusUpdate(BaseModel):
-    status: str
-
-
-# ==========================================
-# SUBMIT AN APPLICATION
-# ==========================================
 
 @router.post("")
 async def submit_application(
     project_id: int = Form(...),
-    name: str = Form(...),
-    email: str = Form(...),
-    skills: str = Form(""),
-    cover_letter: str = Form(""),
+    cover_letter: str = Form("", max_length=5000),
     resume: UploadFile | None = File(None),
+    user=Depends(get_current_user),
+    connection=Depends(get_db),
 ):
-    """Apply to an open project, optionally with a PDF or DOCX resume.
+    """Apply to an open project with the skills on your profile.
 
-    Without a new resume, the applicant's previously uploaded resume is reused.
+    A resume uploaded here also becomes your profile resume. Without one,
+    your current profile resume is attached.
     """
-    name = name.strip()
-    email = validate_email(email)
-
-    if not name:
-        raise HTTPException(400, "Please provide your name.")
-
-    # Read and validate the resume before touching the database.
     new_resume = await read_resume(resume) if resume and resume.filename else None
 
-    connection = get_connection()
-    saved_path = None
+    project = connection.execute(
+        "SELECT * FROM projects WHERE id = ? AND LOWER(TRIM(status)) = 'open'", (project_id,)
+    ).fetchone()
+
+    if project is None:
+        raise HTTPException(404, "This project is unavailable.")
+
+    already_applied = connection.execute(
+        "SELECT 1 FROM applications WHERE user_id = ? AND project_id = ?", (user.id, project_id)
+    ).fetchone()
+
+    if already_applied:
+        raise HTTPException(409, "You have already applied to this project.")
+
+    profile = get_user_row(connection, user.id)
+    previous_resume = profile["resume_filename"]
+    resume_filename = previous_resume if resume_path(previous_resume) else ""
+    resume_text = profile["resume_text"] or ""
+
+    if new_resume:
+        contents, extension, resume_text = new_resume
+        resume_filename = save_resume(contents, extension)
 
     try:
-        project = connection.execute(
-            "SELECT * FROM projects WHERE id = ? AND LOWER(TRIM(status)) = 'open'",
-            (project_id,),
-        ).fetchone()
-
-        if project is None:
-            raise HTTPException(404, "This project is unavailable.")
-
-        employee = connection.execute(
-            "SELECT * FROM employees WHERE email = ?", (email,)
-        ).fetchone()
-
-        if employee is not None:
-            already_applied = connection.execute(
-                "SELECT 1 FROM applications WHERE employee_id = ? AND project_id = ?",
-                (employee["id"], project_id),
-            ).fetchone()
-
-            if already_applied:
-                raise HTTPException(409, "You have already applied to this project.")
-
-        resume_filename = (employee["resume_filename"] if employee else "") or ""
-        resume_text = (employee["resume_text"] if employee else "") or ""
-
         if new_resume:
-            contents, extension, resume_text = new_resume
-            resume_filename, saved_path = save_resume(contents, extension)
-
-        if employee is not None:
-            employee_id = employee["id"]
             connection.execute(
                 """
-                UPDATE employees
-                SET name = ?, skills = ?, resume_filename = ?, resume_text = ?
+                UPDATE users SET resume_filename = ?, resume_text = ?,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """,
-                (name, skills, resume_filename, resume_text, employee_id),
+                (resume_filename, resume_text, user.id),
             )
-        else:
-            employee_id = connection.execute(
-                """
-                INSERT INTO employees (name, email, skills, resume_filename, resume_text)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (name, email, skills, resume_filename, resume_text),
-            ).lastrowid
 
         application_id = connection.execute(
             """
-            INSERT INTO applications (
-                employee_id, project_id, application_status,
-                resume_filename, cover_letter
-            )
+            INSERT INTO applications (user_id, project_id, application_status,
+                resume_filename, cover_letter)
             VALUES (?, ?, 'Submitted', ?, ?)
             """,
-            (employee_id, project_id, resume_filename, cover_letter),
+            (user.id, project_id, resume_filename, cover_letter.strip()),
         ).lastrowid
 
-        # Record how well the applicant matched the project when they applied.
-        match = score_project(dict(project), Candidate(skills, resume_text))
+        match = score_project(dict(project), Candidate(profile["skills"], resume_text))
         details = {key: value for key, value in match.items() if key != "score"}
 
         connection.execute(
             """
-            INSERT INTO matches (employee_id, project_id, match_score, matched_skills)
+            INSERT INTO matches (user_id, project_id, match_score, matched_skills)
             VALUES (?, ?, ?, ?)
-            ON CONFLICT(employee_id, project_id) DO UPDATE SET
+            ON CONFLICT (user_id, project_id) DO UPDATE SET
                 match_score = excluded.match_score,
                 matched_skills = excluded.matched_skills,
                 created_at = CURRENT_TIMESTAMP
             """,
-            (employee_id, project_id, match["score"], json.dumps(details)),
+            (user.id, project_id, match["score"], json.dumps(details)),
         )
 
         connection.commit()
-
-        return {
-            "message": "Application submitted successfully!",
-            "application_id": application_id,
-            "status": "Submitted",
-            "resume_uploaded": new_resume is not None,
-            "resume_text_characters": len(resume_text),
-            "match_score": match["score"],
-        }
 
     except Exception as error:
         connection.rollback()
 
-        if saved_path and saved_path.exists():
-            saved_path.unlink()
+        if new_resume:
+            path = resume_path(resume_filename)
+            if path:
+                path.unlink(missing_ok=True)
 
         if isinstance(error, sqlite3.IntegrityError):
             raise HTTPException(409, "You have already applied to this project.")
-
         raise
 
-    finally:
-        connection.close()
-
-
-# ==========================================
-# EMPLOYEE APPLICATION TRACKING
-# ==========================================
-
-@router.get("/my-applications")
-def get_my_applications(email: str):
-    email = validate_email(email)
-
-    connection = get_connection()
-
-    try:
-        rows = connection.execute("""
-            SELECT
-                applications.id AS application_id,
-                projects.title AS project_title,
-                projects.client_project AS client_project,
-                projects.location AS location,
-                applications.application_status AS status,
-                applications.submitted_at AS submitted_at,
-                applications.updated_at AS updated_at
-            FROM applications
-            JOIN employees ON applications.employee_id = employees.id
-            JOIN projects ON applications.project_id = projects.id
-            WHERE LOWER(employees.email) = ?
-            ORDER BY applications.submitted_at DESC
-        """, (email,)).fetchall()
-    finally:
-        connection.close()
+    if new_resume:
+        delete_resume_if_unused(connection, previous_resume)
 
     return {
-        "email": email,
-        "total_applications": len(rows),
-        "applications": [dict(row) for row in rows],
-    }
-
-
-# ==========================================
-# INDIVIDUAL APPLICATIONS
-# ==========================================
-
-@router.get("/{application_id}")
-def get_application(application_id: int):
-    connection = get_connection()
-
-    try:
-        application = connection.execute("""
-            SELECT
-                applications.*,
-                employees.name,
-                employees.email,
-                projects.title,
-                projects.role_id
-            FROM applications
-            JOIN employees ON applications.employee_id = employees.id
-            JOIN projects ON applications.project_id = projects.id
-            WHERE applications.id = ?
-        """, (application_id,)).fetchone()
-    finally:
-        connection.close()
-
-    if application is None:
-        raise HTTPException(404, "Application not found.")
-
-    return dict(application)
-
-
-@router.patch("/{application_id}/status")
-def update_application_status(application_id: int, update: ApplicationStatusUpdate):
-    new_status = update.status.strip()
-
-    if new_status not in ALLOWED_STATUSES:
-        raise HTTPException(400, "Invalid application status.")
-
-    connection = get_connection()
-
-    try:
-        cursor = connection.execute(
-            """
-            UPDATE applications
-            SET application_status = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-            """,
-            (new_status, application_id),
-        )
-
-        if cursor.rowcount == 0:
-            raise HTTPException(404, "Application not found.")
-
-        connection.commit()
-    finally:
-        connection.close()
-
-    return {
-        "message": "Application status updated.",
+        "message": "Application submitted successfully!",
         "application_id": application_id,
-        "status": new_status,
+        "status": "Submitted",
+        "resume_attached": bool(resume_filename),
+        "match_score": match["score"],
     }

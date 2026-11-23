@@ -102,10 +102,68 @@ class Candidate:
 
         self.skills = {normalize_skill(skill) for skill in skills if str(skill).strip()}
         self.resume_text = resume_text or ""
+        self.years = extract_years_of_experience(self.resume_text)
 
     def has(self, skill):
         return normalize_skill(skill) in self.skills or skill_in_text(skill, self.resume_text)
 
+
+# ==========================================
+# EXPERIENCE
+# ==========================================
+
+# Minimum years of experience each seniority level usually expects.
+SENIORITY_MIN_YEARS = {
+    "intern": 0, "entry": 0, "junior": 0, "associate": 1,
+    "mid": 3, "intermediate": 3,
+    "senior": 5, "staff": 8, "lead": 8, "principal": 10,
+}
+
+# Points taken off per year short of a level's minimum, and the most taken off.
+EXPERIENCE_PENALTY_PER_YEAR = 5
+EXPERIENCE_MAX_PENALTY = 15
+
+YEARS_PATTERN = re.compile(r"\b(\d{1,2})\s*\+?\s*(?:years?|yrs?)\b", re.IGNORECASE)
+
+
+def extract_years_of_experience(text):
+    """Best guess at total years of experience stated in a resume, or None.
+
+    Uses the largest "N years" figure found. This is a heuristic: a resume
+    that never states a number gets None, and no experience adjustment.
+    """
+    years = []
+
+    for match in YEARS_PATTERN.finditer(text or ""):
+        value = int(match.group(1))
+        if 0 < value <= 45:
+            years.append(value)
+
+    return max(years) if years else None
+
+
+def required_years(seniority):
+    words = re.findall(r"[a-z]+", (seniority or "").lower())
+    levels = [SENIORITY_MIN_YEARS[word] for word in words if word in SENIORITY_MIN_YEARS]
+    return max(levels) if levels else None
+
+
+def experience_fit(seniority, years):
+    needed = required_years(seniority)
+
+    if needed is None or years is None:
+        return {"years": years, "required_years": needed, "fit": "unknown", "penalty": 0}
+
+    if years >= needed:
+        return {"years": years, "required_years": needed, "fit": "meets", "penalty": 0}
+
+    penalty = min(EXPERIENCE_MAX_PENALTY, EXPERIENCE_PENALTY_PER_YEAR * (needed - years))
+    return {"years": years, "required_years": needed, "fit": "below", "penalty": penalty}
+
+
+# ==========================================
+# SCORING
+# ==========================================
 
 def score_project(project, candidate):
     required = split_skills(project.get("required_skills"))
@@ -116,22 +174,27 @@ def score_project(project, candidate):
     matched_nice_to_have = [skill for skill in nice_to_have if candidate.has(skill)]
 
     if required and nice_to_have:
-        score = (
+        skill_score = (
             REQUIRED_WEIGHT * len(matched_required) / len(required)
             + NICE_TO_HAVE_WEIGHT * len(matched_nice_to_have) / len(nice_to_have)
         )
     elif required:
-        score = len(matched_required) / len(required)
+        skill_score = len(matched_required) / len(required)
     elif nice_to_have:
-        score = len(matched_nice_to_have) / len(nice_to_have)
+        skill_score = len(matched_nice_to_have) / len(nice_to_have)
     else:
-        score = 0.0
+        skill_score = 0.0
+
+    skill_score = round(skill_score * 100)
+    experience = experience_fit(project.get("seniority"), candidate.years)
 
     return {
-        "score": round(score * 100),
+        "score": max(0, skill_score - experience["penalty"]),
+        "skill_score": skill_score,
         "matched_required": matched_required,
         "missing_required": missing_required,
         "matched_nice_to_have": matched_nice_to_have,
+        "experience": experience,
     }
 
 

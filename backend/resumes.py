@@ -1,19 +1,28 @@
+"""Resume upload validation, text extraction and storage."""
+
 import os
+import re
 from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
 
 import pymupdf
 from docx import Document
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import HTTPException, UploadFile
 
-from backend.database.database import PROJECT_ROOT, get_connection
-from backend.matching import detect_skills, split_skills
-
-router = APIRouter()
+from backend.database.database import PROJECT_ROOT
 
 MAX_RESUME_SIZE = 5 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".pdf": b"%PDF-", ".docx": b"PK"}
+
+# Stored names are always <32 hex chars>.<ext>; anything else is rejected
+# before it gets near the filesystem.
+STORED_NAME = re.compile(r"^[0-9a-f]{32}\.(pdf|docx)$")
+
+MEDIA_TYPES = {
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
 
 
 def get_resume_folder():
@@ -76,42 +85,31 @@ async def read_resume(upload: UploadFile):
 
 
 def save_resume(contents, extension):
-    """Store resume bytes under a random name and return (filename, path)."""
+    """Store resume bytes under a random name and return the name."""
     filename = f"{uuid4().hex}{extension}"
+    (get_resume_folder() / filename).write_bytes(contents)
+    return filename
+
+
+def resume_path(filename):
+    """Path of a stored resume, or None if the name is invalid or missing."""
+    if not filename or not STORED_NAME.match(filename):
+        return None
+
     path = get_resume_folder() / filename
-    path.write_bytes(contents)
-    return filename, path
+    return path if path.is_file() else None
 
 
-def skill_vocabulary():
-    """Every skill named by any project, used to spot skills in resumes."""
-    connection = get_connection()
+def delete_resume_if_unused(connection, filename):
+    """Remove a replaced resume unless an application still refers to it."""
+    path = resume_path(filename)
 
-    try:
-        rows = connection.execute(
-            "SELECT required_skills, nice_to_have_skills FROM projects"
-        ).fetchall()
-    finally:
-        connection.close()
+    if path is None:
+        return
 
-    vocabulary = []
-    for row in rows:
-        vocabulary.extend(split_skills(row["required_skills"]))
-        vocabulary.extend(split_skills(row["nice_to_have_skills"]))
+    in_use = connection.execute(
+        "SELECT 1 FROM applications WHERE resume_filename = ? LIMIT 1", (filename,)
+    ).fetchone()
 
-    return vocabulary
-
-
-@router.post("/parse")
-async def parse_resume(file: UploadFile = File(...)):
-    """Read a resume and report which known skills it mentions.
-
-    Nothing is stored; this powers the "fill skills from my resume" button.
-    """
-    _, _, text = await read_resume(file)
-
-    return {
-        "has_extractable_text": bool(text),
-        "extracted_character_count": len(text),
-        "detected_skills": detect_skills(text, skill_vocabulary()),
-    }
+    if not in_use:
+        path.unlink(missing_ok=True)
