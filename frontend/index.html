@@ -50,6 +50,12 @@
 
     <main class="main-content">
 
+        <div id="demo-banner" class="demo-banner hidden" role="status">
+            <strong>Demo mode:</strong> the ProjectHub API isn't running, so these
+            are the built-in sample roles. Start the API to apply, get
+            recommendations, and use the manager dashboard.
+        </div>
+
         <!-- BROWSE PROJECTS -->
         <section id="browse-view" class="view">
 
@@ -115,7 +121,12 @@
                     placeholder="Example: SQL, Python, Excel, Power BI"
                 ></textarea>
 
-                <h2>Upload Resume</h2>
+                <h2>Read Skills From Your Resume</h2>
+
+                <p>
+                    Choose a PDF or DOCX resume and ProjectHub adds the skills
+                    it recognizes to the list above. The file is not stored.
+                </p>
 
                 <input
                     type="file"
@@ -246,6 +257,11 @@
             <div class="profile-card">
                 <h2>Published Projects</h2>
                 <div id="manager-project-list"></div>
+            </div>
+
+            <div id="manager-applicants" class="profile-card hidden">
+                <h2 id="manager-applicants-title">Applicants</h2>
+                <div id="manager-applicant-list" class="project-grid"></div>
             </div>
 
         </section>

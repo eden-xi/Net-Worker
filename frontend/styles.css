@@ -296,7 +296,8 @@ button:disabled {
 
 /* PROJECT CARDS */
 
-.project-list {
+.project-list,
+.project-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 22px;
@@ -617,4 +618,82 @@ input[type="file"]::file-selector-button {
     .project-actions button {
         width: 100%;
     }
+}
+
+/* =========================================
+   STATUS MESSAGES, DEMO BANNER, MATCHING
+========================================= */
+
+.status-success {
+    color: var(--success);
+}
+
+.status-error {
+    color: var(--danger);
+}
+
+.demo-banner {
+    margin-bottom: 24px;
+    padding: 14px 18px;
+    border: 1px solid rgba(161, 0, 255, 0.45);
+    border-radius: var(--radius);
+    background: rgba(161, 0, 255, 0.10);
+    color: var(--text-main);
+    line-height: 1.5;
+}
+
+.demo-banner.hidden {
+    display: none;
+}
+
+.match-meter {
+    height: 8px;
+    margin: 12px 0 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.match-meter-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent-dark), var(--accent-light));
+}
+
+.skill-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0;
+}
+
+.skill-chip {
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+}
+
+.skill-chip.matched {
+    border-color: rgba(53, 214, 160, 0.5);
+    color: var(--success);
+}
+
+.skill-chip.bonus {
+    border-color: rgba(189, 92, 255, 0.5);
+    color: var(--accent-light);
+}
+
+.skill-chip.missing {
+    color: var(--text-muted);
+    text-decoration: line-through;
+}
+
+.status-select {
+    margin-left: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-card-hover);
+    color: var(--text-main);
 }

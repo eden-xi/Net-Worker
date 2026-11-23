@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Local data: the database and uploaded resumes hold applicants' personal
+# information and must never be committed.
+*.db
+*.db-journal
+uploads/
+
+# Environment and editor files
+.env
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
